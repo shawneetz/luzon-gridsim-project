@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    const apiUrl = process.env.API_URL ?? "http://localhost:8000";
+    return [{ source: "/next-app/api/:path*", destination: `${apiUrl}/:path*` }];
+  },
   experimental: {
     agentFeedback: true,
   },
