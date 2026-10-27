@@ -8,7 +8,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Luzon Grid Dispatch Simulator",
+  title: "Luzon GridSim",
   description: "Cheapest way to run the Luzon grid for one day, solved with the simplex method",
 };
 

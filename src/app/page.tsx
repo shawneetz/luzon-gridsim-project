@@ -52,7 +52,7 @@ export default function Home() {
   return (
     <main>
       <header>
-        <h1>Luzon Grid Dispatch and Price Simulator</h1>
+        <h1>Luzon GridSim</h1>
         <p>The cheapest way to run the grid for one day, solved with the simplex method.</p>
       </header>
 
