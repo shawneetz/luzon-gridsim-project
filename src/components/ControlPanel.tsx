@@ -1,14 +1,13 @@
-/*
- * ControlPanel.tsx
- * The left panel of the app. It has the plant group checkboxes
- * (with Check All and Reset), the CO2 cap toggle and limit box,
- * and the Solve button. It holds no state of its own: everything
- * comes in through props from page.tsx.
- */
+// CONTROL PANEL
+// Left side of the page: plant group slots, the CO2 cap toggle, and the Solve button.
+// Each plant group is an inventory slot you click to select (white frame) or unselect.
+// This component holds no state; the page passes everything in through props.
+
+import { styleOf } from "@/lib/plants";
 
 interface Props {
-  groups: string[];                          // all plant group names
-  selected: string[];                        // groups currently ticked
+  groups: string[];
+  selected: string[];
   onToggleGroup: (group: string) => void;
   onCheckAll: () => void;
   onReset: () => void;
@@ -23,32 +22,38 @@ interface Props {
 export default function ControlPanel(props: Props) {
   return (
     <section className="card">
-      {/* Plant group selection */}
       <h2>Plant groups</h2>
       <div className="button-row">
-        <button type="button" className="secondary" onClick={props.onCheckAll}>
+        <button type="button" onClick={props.onCheckAll}>
           Check All
         </button>
-        <button type="button" className="secondary" onClick={props.onReset}>
+        <button type="button" onClick={props.onReset}>
           Reset
         </button>
       </div>
 
-      {/* One checkbox per plant group */}
-      <div className="checklist">
-        {props.groups.map((group) => (
-          <label key={group}>
-            <input
-              type="checkbox"
-              checked={props.selected.includes(group)}
-              onChange={() => props.onToggleGroup(group)}
-            />
-            {group}
-          </label>
-        ))}
+      {/* One slot per plant group. Clicking a slot selects or unselects it. */}
+      <div className="plant-grid">
+        {props.groups.map((group) => {
+          const style = styleOf(group);
+          const isOn = props.selected.includes(group);
+          return (
+            <button
+              key={group}
+              type="button"
+              className={`plant-card ${isOn ? "on" : ""}`}
+              style={{ "--plant": style.color } as React.CSSProperties}
+              aria-pressed={isOn}
+              onClick={() => props.onToggleGroup(group)}
+            >
+              <span className="plant-icon">{style.icon}</span>
+              <span className="plant-name">{group}</span>
+              <span className="plant-tag">{style.tag}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* CO2 cap: a switch and a limit box */}
       <h2>CO₂ cap</h2>
       <label className="toggle">
         <input type="checkbox" checked={props.co2On} onChange={(e) => props.onCo2On(e.target.checked)} />
@@ -56,8 +61,6 @@ export default function ControlPanel(props: Props) {
       </label>
       <label className="field">
         Limit (t/day)
-        {/* The box is disabled while the cap is switched off.
-            It is a text input so blank or invalid values reach the API's validation. */}
         <input
           type="text"
           inputMode="numeric"
@@ -67,7 +70,6 @@ export default function ControlPanel(props: Props) {
         />
       </label>
 
-      {/* Start solving; disabled while a solve is running */}
       <button type="button" className="primary" onClick={props.onSolve} disabled={props.loading}>
         {props.loading ? "Solving..." : "Solve"}
       </button>

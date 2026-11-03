@@ -1,12 +1,8 @@
-/*
- * page.tsx
- * The main (and only) page of Luzon GridSim. It keeps all the state
- * (selected plant groups, CO2 cap, solver result) and connects the
- * control panel on the left with the Results / Simplex Tableau tabs
- * on the right. It talks to the R API through the helpers in lib/api.ts.
- */
-
 "use client";
+
+// MAIN PAGE
+// Loads the options from the R API, keeps all the user choices in state,
+// sends them to /solve, and shows the Results or Simplex Tableau tab.
 
 import { useEffect, useState } from "react";
 import ControlPanel from "@/components/ControlPanel";
@@ -18,33 +14,33 @@ import type { Options, SolveResponse } from "@/lib/types";
 type Tab = "results" | "tableau";
 
 export default function Home() {
-  const [options, setOptions] = useState<Options | null>(null); // plant groups + default CO2 cap from the API
-  const [loadError, setLoadError] = useState("");              // message if the API cannot be reached
-  const [selected, setSelected] = useState<string[]>([]);      // plant groups the user ticked
-  const [co2On, setCo2On] = useState(false);                   // is the CO2 cap switched on?
-  const [co2Cap, setCo2Cap] = useState("");                    // CO2 cap typed by the user (kept as text)
-  const [result, setResult] = useState<SolveResponse | null>(null); // latest answer from the solver
-  const [loading, setLoading] = useState(false);               // true while waiting for the solver
-  const [tab, setTab] = useState<Tab>("results");              // which tab is open
-  const [runId, setRunId] = useState(0);                       // changes on every solve, to reset the tableau viewer
+  const [options, setOptions] = useState<Options | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [co2On, setCo2On] = useState(false);
+  const [co2Cap, setCo2Cap] = useState("");
+  const [result, setResult] = useState<SolveResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<Tab>("results");
+  const [runId, setRunId] = useState(0); // changes on every solve so the tableau viewer resets
 
-  // When the page loads, ask the API for the plant groups and default CO2 cap
+  // On first load, ask the API for the plant groups and the default CO2 cap
   useEffect(() => {
     fetchOptions()
       .then((data) => {
         setOptions(data);
-        setSelected(data.groups);            // start with every group checked
+        setSelected(data.groups);
         setCo2Cap(String(data.defaultCo2Cap));
       })
       .catch(() => setLoadError("Could not reach the solver API. Is the R API running on port 8000?"));
   }, []);
 
-  // Tick or untick one plant group
+  // Add or remove one plant group from the selection
   function toggleGroup(group: string) {
     setSelected((now) => (now.includes(group) ? now.filter((g) => g !== group) : [...now, group]));
   }
 
-  // Send the user's choices to the solver and show the answer
+  // Send the choices to the R solver and show the result
   async function handleSolve() {
     setLoading(true);
     try {
@@ -52,29 +48,27 @@ export default function Home() {
       setRunId((id) => id + 1);
       setTab("results");
     } catch {
-      // Never show raw errors, only a friendly message
       setResult({ status: "error", message: "Could not reach the solver API. Is the R API running?" });
     } finally {
       setLoading(false);
     }
   }
 
-  // The tableau tab only works when the solver returned tableaus
   const hasTableaus = result?.tableaus && result.tableaus.length > 0;
 
   return (
     <main>
       <header>
-        <h1>Luzon GridSim</h1>
-        <p>The cheapest way to run the grid for one day, solved with the simplex method.</p>
+        <h1>
+          Luzon <span>GridSim</span>
+        </h1>
+        <p>Craft the cheapest way to power Luzon for one day. Solved with the simplex method.</p>
       </header>
 
       {loadError && <p className="banner warning">{loadError}</p>}
 
-      {/* Show the app only after the options are loaded */}
       {options && (
         <div className="layout">
-          {/* Left side: plant group checkboxes, CO2 cap, Solve button */}
           <ControlPanel
             groups={options.groups}
             selected={selected}
@@ -90,7 +84,6 @@ export default function Home() {
           />
 
           <section className="card">
-            {/* Right side: tabs for the results and the simplex tableaus */}
             <div className="tabs">
               <button className={tab === "results" ? "active" : ""} onClick={() => setTab("results")}>
                 Results
@@ -104,9 +97,8 @@ export default function Home() {
               </button>
             </div>
 
-            {!result && <p className="hint">Pick the plant groups and press Solve.</p>}
+            {!result && <p className="hint">Pick your plant slots and press Solve.</p>}
             {result && tab === "results" && <ResultsTab result={result} />}
-            {/* key={runId} resets the viewer to iteration 0 on every new solve */}
             {result && tab === "tableau" && hasTableaus && <TableauTab key={runId} steps={result.tableaus!} />}
           </section>
         </div>

@@ -1,174 +1,210 @@
 /*
- * globals.css
- * Global styles for Luzon GridSim: color variables, page layout, cards,
- * buttons, tabs, banners, stat boxes, and the scrollable data tables.
- */
-
+  GLOBAL THEME: Minecraft-inspired
+  Everything is drawn with plain CSS (no images): dirt background, grass strip,
+  beveled inventory panels, slots, stone buttons, toast and death-screen banners.
+  Sections: 1) colors  2) page  3) panels  4) controls  5) inventory slots  6) tabs
+            7) banners  8) stat boxes  9) chart  10) price slots  11) tables
+*/
 @import "tailwindcss";
 
-/* Color palette used everywhere in the app */
+/* ---------- 1) COLORS (change the look of the whole app here) ---------- */
 :root {
-  --bg: #f4f6f8;
-  --card: #ffffff;
-  --text: #1c2430;
-  --muted: #6b7686;
-  --line: #dde3ea;
-  --accent: #1f6feb;
-  --accent-dark: #1858bd;
-  --success-bg: #e3f6e8;
-  --success-text: #176b2c;
-  --warning-bg: #fdecea;
-  --warning-text: #a12622;
+  --dirt: #6b4a2f;          /* page background */
+  --dirt-dark: #5a3d26;
+  --grass: #5fa83a;         /* grass strip and the Solve button */
+  --grass-dark: #3f7a24;
+  --panel: #c6c6c6;         /* inventory panel gray */
+  --panel-light: #ffffff;   /* bevel highlight */
+  --panel-dark: #555555;    /* bevel shadow */
+  --slot: #8b8b8b;          /* empty slot gray */
+  --stone: #7a7a7a;         /* button gray */
+  --screen: #1b1b1b;        /* dark screens (tables, chart) */
+  --ink: #3f3f3f;           /* text on gray panels */
+  --gold: #ffd83d;          /* highlights and numbers */
+  --green: #55ff55;         /* success text */
+  --red: #ff5555;           /* danger text */
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-/* Page background, text color, and font */
+/* ---------- 2) PAGE ---------- */
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.5;
+  color: var(--ink);
+  font-family: var(--font-body), monospace;
+  font-size: 1.25rem;
+  line-height: 1.25;
+  /* dirt: a repeating pattern of darker and lighter brown squares */
+  background:
+    linear-gradient(45deg, var(--dirt-dark) 25%, transparent 25%, transparent 75%, var(--dirt-dark) 75%) 0 0 / 32px 32px,
+    linear-gradient(45deg, var(--dirt-dark) 25%, transparent 25%, transparent 75%, var(--dirt-dark) 75%) 16px 16px / 32px 32px,
+    var(--dirt);
+  background-attachment: fixed;
+  image-rendering: pixelated;
 }
 
-/* Centered page container */
 main {
-  max-width: 1300px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 0 16px 56px;
 }
 
-/* Page title and subtitle */
-header h1 {
-  margin: 0;
-  font-size: 1.6rem;
+header {
+  /* Header: sits on a grass strip, like the top of a grass block */
+  margin: 0 -16px 24px;
+  padding: 28px 16px 20px;
+  background: linear-gradient(var(--grass) 0 14px, var(--grass-dark) 14px 18px, #7a5230 18px);
+  border-bottom: 4px solid #000;
 }
+
+header h1 {
+  margin: 8px 0 0;
+  font-family: var(--font-pixel), monospace;
+  font-size: 1.9rem;
+  font-weight: 400;
+  color: #fff;
+  /* hard pixel shadow, like the in-game title text */
+  text-shadow: 4px 4px 0 #3f3f3f;
+}
+header h1 span { color: var(--gold); }
 
 header p {
-  margin: 4px 0 20px;
-  color: var(--muted);
+  margin: 12px 0 0;
+  font-size: 1.4rem;
+  color: #fff;
+  text-shadow: 2px 2px 0 #3f3f3f;
 }
 
 h2 {
-  margin: 20px 0 8px;
-  font-size: 1rem;
+  margin: 18px 0 8px;
+  font-family: var(--font-pixel), monospace;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--ink);
 }
-
-h2:first-child {
-  margin-top: 0;
-}
+h2:first-child { margin-top: 0; }
 
 h3 {
   margin: 8px 0 0;
-  font-size: 1rem;
+  font-family: var(--font-pixel), monospace;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--ink);
 }
 
-/* Two columns: control panel on the left, results on the right */
+/* ---------- 3) LAYOUT AND PANELS ---------- */
 .layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
   align-items: start;
 }
 
-/* On small screens, stack the columns */
-@media (max-width: 800px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
 }
 
-/* White box with a border, used for the panels */
 .card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
   padding: 16px;
+  background: var(--panel);
+  border: 4px solid #000;
+  box-shadow:
+    inset 4px 4px 0 var(--panel-light),
+    inset -4px -4px 0 var(--panel-dark);
 }
 
-/* Vertical stack with even spacing */
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-/* List of plant group checkboxes */
-.checklist {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-}
+.hint { color: var(--ink); }
 
-.checklist label,
+/* ---------- 4) CONTROLS ---------- */
 .toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
 }
 
-/* Label + input pair (like the CO2 limit box) */
 .field {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-top: 10px;
-  font-size: 0.9rem;
-  color: var(--muted);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--grass-dark);
+  width: 20px;
+  height: 20px;
 }
 
 input[type="text"],
 select {
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  font: inherit;
-  color: var(--text);
-  background: #fff;
+  padding: 6px 10px;
+  font-family: var(--font-body), monospace;
+  font-size: 1.3rem;
+  color: #fff;
+  background: #000;
+  border: 2px solid var(--panel-dark);
+  border-radius: 0;
 }
-
-/* Greyed-out look when the CO2 cap is switched off */
-input[type="text"]:disabled {
-  background: var(--bg);
-  color: var(--muted);
+input[type="text"]:focus,
+select:focus {
+  outline: none;
+  border-color: #fff;
 }
+input[type="text"]:disabled { opacity: 0.5; }
 
-/* Base button style */
 button {
-  font: inherit;
+  /* Stone button: gray with a bevel; turns blue-ish on hover like the game menu */
+  font-family: var(--font-pixel), monospace;
+  font-size: 0.7rem;
   cursor: pointer;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  padding: 8px 14px;
+  padding: 12px 14px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #3f3f3f;
+  background: var(--stone);
+  border: 2px solid #000;
+  border-radius: 0;
+  box-shadow:
+    inset 3px 3px 0 #b5b5b5,
+    inset -3px -3px 0 #4a4a4a;
 }
-
+button:hover:not(:disabled) {
+  background: #6f7fb8;
+  box-shadow:
+    inset 3px 3px 0 #a9b7ee,
+    inset -3px -3px 0 #46528a;
+}
+button:active:not(:disabled) {
+  box-shadow:
+    inset -3px -3px 0 #b5b5b5,
+    inset 3px 3px 0 #4a4a4a;
+}
 button:disabled {
-  opacity: 0.5;
+  color: #a0a0a0;
   cursor: not-allowed;
 }
 
-/* Big blue Solve button */
 button.primary {
   width: 100%;
-  margin-top: 20px;
-  background: var(--accent);
-  color: #fff;
-  font-weight: 600;
+  margin-top: 22px;
+  padding: 18px;
+  font-size: 1rem;
+  background: var(--grass);
+  box-shadow:
+    inset 3px 3px 0 #9be06f,
+    inset -3px -3px 0 var(--grass-dark);
 }
-
 button.primary:hover:not(:disabled) {
-  background: var(--accent-dark);
-}
-
-/* White outlined button (Check All, Reset, Previous, Next) */
-button.secondary {
-  background: #fff;
-  border-color: var(--line);
+  background: #6fc247;
+  box-shadow:
+    inset 3px 3px 0 #b6f28f,
+    inset -3px -3px 0 var(--grass-dark);
 }
 
 .button-row {
@@ -177,122 +213,264 @@ button.secondary {
   flex-wrap: wrap;
 }
 
-/* Results / Simplex Tableau tabs */
+/* ---------- 5) INVENTORY SLOTS (the plant groups) ---------- */
+.plant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.plant-card {
+  /* --plant is set per slot from plants.ts */
+  --plant: var(--slot);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px;
+  text-align: left;
+  text-shadow: none;
+  color: var(--ink);
+  background: var(--slot);
+  border: 2px solid #373737;
+  /* slot bevel is the opposite of a panel: dark top-left, light bottom-right */
+  box-shadow:
+    inset 3px 3px 0 #373737,
+    inset -3px -3px 0 #ffffff;
+}
+.plant-card:hover:not(:disabled) {
+  background: #a0a0a0;
+  box-shadow:
+    inset 3px 3px 0 #373737,
+    inset -3px -3px 0 #ffffff;
+}
+.plant-card.on {
+  /* selected slot: white hotbar-style frame and a color bar of the plant type */
+  background: #b8b8b8;
+  border: 4px solid #fff;
+  outline: 2px solid #000;
+  box-shadow: inset 0 -8px 0 var(--plant);
+  padding-bottom: 14px;
+}
+
+.plant-icon { font-size: 1.8rem; line-height: 1; }
+.plant-name {
+  font-family: var(--font-body), monospace;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.plant-tag {
+  font-family: var(--font-pixel), monospace;
+  font-size: 0.5rem;
+  color: #4a4a4a;
+}
+
+/* ---------- 6) TABS ---------- */
 .tabs {
   display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--line);
+  gap: 6px;
   margin-bottom: 16px;
 }
-
-.tabs button {
-  background: none;
-  border-radius: 6px 6px 0 0;
-  color: var(--muted);
-}
-
-/* Highlight the selected tab */
+.tabs button { flex: 1; }
 .tabs button.active {
-  color: var(--accent);
-  border-bottom: 2px solid var(--accent);
-  font-weight: 600;
+  background: var(--grass);
+  box-shadow:
+    inset 3px 3px 0 #9be06f,
+    inset -3px -3px 0 var(--grass-dark);
 }
 
-/* Status message box (green = success, red = warning) */
+/* ---------- 7) BANNERS ---------- */
 .banner {
   margin: 0;
-  padding: 10px 14px;
-  border-radius: 6px;
-  font-weight: 600;
+  padding: 14px 16px;
+  font-size: 1.5rem;
+  color: #fff;
+  background: #000;
+  border: 4px solid #555;
 }
-
 .banner.success {
-  background: var(--success-bg);
-  color: var(--success-text);
+  /* "Advancement Made!" toast */
+  border-color: #8b8b8b;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-
+.banner.success .toast-title {
+  font-family: var(--font-pixel), monospace;
+  font-size: 0.7rem;
+  color: var(--gold);
+}
 .banner.warning {
-  background: var(--warning-bg);
-  color: var(--warning-text);
+  /* Plain red message (invalid input and server errors) */
+  color: var(--red);
+  border-color: var(--red);
+}
+.banner.death {
+  /* "You Died!" screen for the infeasible case */
+  text-align: center;
+  padding: 24px 16px;
+  color: #fff;
+  background: rgba(150, 10, 10, 0.92);
+  border-color: #000;
+  animation: shake 0.5s 2;
+}
+.banner.death .death-title {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-pixel), monospace;
+  font-size: 1.4rem;
+  text-shadow: 4px 4px 0 #3f0000;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
 }
 
-.hint {
-  color: var(--muted);
-}
-
-/* Small summary boxes (cost, iterations, unknowns, constraints) */
+/* ---------- 8) STAT BOXES ---------- */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
 }
-
 .stat {
   display: flex;
   flex-direction: column;
   padding: 10px 12px;
-  background: var(--bg);
-  border-radius: 8px;
+  background: var(--screen);
+  border: 2px solid #000;
+  box-shadow:
+    inset 3px 3px 0 #000,
+    inset -3px -3px 0 #3a3a3a;
 }
-
 .stat-label {
-  font-size: 0.8rem;
-  color: var(--muted);
+  font-size: 1.1rem;
+  color: #aaaaaa;
 }
-
 .stat-value {
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.9rem;
+  line-height: 1.1;
+  color: var(--gold);
+  text-shadow: 2px 2px 0 #3f3f00;
 }
 
-/* Scrollable box around tables, so big tableaus can scroll both ways */
+/* ---------- 9) DISPATCH CHART (blocky stacked bars) ---------- */
+.chart-box {
+  padding: 12px;
+  background: var(--screen);
+  border: 2px solid #000;
+  box-shadow:
+    inset 3px 3px 0 #000,
+    inset -3px -3px 0 #3a3a3a;
+}
+.chart-box svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  shape-rendering: crispEdges; /* keeps edges sharp and pixel-like */
+}
+.chart-axis { stroke: #3a3a3a; stroke-width: 1; }
+.chart-label {
+  fill: #cfcfcf;
+  font-family: var(--font-body), monospace;
+  font-size: 15px;
+}
+.chart-demand {
+  /* demand line: dashed red, like redstone */
+  fill: none;
+  stroke: #ff3030;
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 10px;
+  color: #cfcfcf;
+}
+.legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  border: 2px solid #000;
+}
+
+/* ---------- 10) PRICE SLOTS (a hotbar of six blocks) ---------- */
+.price-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 6px;
+}
+.price-cell {
+  padding: 8px;
+  text-align: center;
+  background: var(--slot);
+  border: 2px solid #373737;
+  box-shadow:
+    inset 3px 3px 0 #373737,
+    inset -3px -3px 0 #ffffff;
+}
+.price-block {
+  font-family: var(--font-pixel), monospace;
+  font-size: 0.65rem;
+  color: var(--ink);
+}
+.price-value {
+  /* the price sits on a dark plate, colored green (cheap) to red (expensive) */
+  margin-top: 6px;
+  padding: 2px 4px;
+  font-size: 1.4rem;
+  color: var(--heat);
+  background: var(--screen);
+}
+
+/* ---------- 11) TABLES (dispatch table + tableau tab) ---------- */
 .table-scroll {
   max-height: 560px;
   overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  background: var(--screen);
+  border: 2px solid #000;
+  box-shadow:
+    inset 3px 3px 0 #000,
+    inset -3px -3px 0 #3a3a3a;
 }
-
 table {
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.85rem;
+  font-family: var(--font-body), monospace;
+  font-size: 1.15rem;
+  color: #fff;
   font-variant-numeric: tabular-nums;
 }
-
 th,
 td {
-  padding: 6px 10px;
+  padding: 4px 10px;
   text-align: right;
   white-space: nowrap;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid #333;
 }
-
-/* Header row stays visible when scrolling down */
 thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #eef2f6;
+  background: #2b2b2b;
+  color: var(--gold);
 }
-
-/* Row labels stay visible when scrolling right */
 tbody th {
   position: sticky;
   left: 0;
   z-index: 1;
   text-align: left;
-  background: #f8fafc;
-  border-right: 1px solid var(--line);
+  background: #242424;
+  color: var(--green);
+  border-right: 1px solid #333;
 }
-
-/* Top-left corner cell stays pinned both ways */
 thead th:first-child {
   left: 0;
   z-index: 3;
 }
-
-/* Zeros are dimmed so the non-zero values stand out */
-td.zero {
-  color: #b4bcc8;
-}
+td.zero { color: #555; }
+tbody tr:hover td { background: #2f3b2f; }
