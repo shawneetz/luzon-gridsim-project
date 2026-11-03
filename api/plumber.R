@@ -20,7 +20,7 @@ function() {
 #* @serializer json list(auto_unbox = TRUE, digits = NA)
 function(req) {
 
-  # never crash and never show raw error messages [P: Failure Cases]
+  # never crash and never show raw error messages 
   tryCatch({
     body <- req$body
 
