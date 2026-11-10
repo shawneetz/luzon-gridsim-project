@@ -11,4 +11,3 @@ library(plumber)
 options(scipen = 999)      # not using scientific notation like 3.39e+04
 
 pr("plumber.R") |> pr_run(host = "127.0.0.1", port = 8000)
-s

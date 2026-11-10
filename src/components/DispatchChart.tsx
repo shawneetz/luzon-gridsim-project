@@ -98,7 +98,7 @@ export default function DispatchChart({ groups, blocks, values }: Props) {
           </span>
         ))}
         <span>
-          <span className="legend-dot" style={{ background: "#ff3030" }} />
+          <span className="legend-dot" style={{ background: "var(--redstone)" }} />
           Demand
         </span>
       </div>

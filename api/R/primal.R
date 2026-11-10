@@ -1,4 +1,4 @@
-# BUILD THE PRIMAL TABLEAU
+# BUILDS THE PRIMAL TABLEAU
 
 # Rows = constraints, last row = objective, columns = unknowns + RHS 
 # Every constraint is written in the >= form because this is a minimization 

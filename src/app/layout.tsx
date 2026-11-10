@@ -2,6 +2,7 @@
 // Wraps every page. It loads the two pixel fonts and exposes them as CSS variables:
 //   --font-pixel : Press Start 2P, for titles and buttons (big and chunky, use small sizes)
 //   --font-body  : VT323, for text, numbers, and tables (pixel style but easy to read)
+
 import type { Metadata } from "next";
 import { Press_Start_2P, VT323 } from "next/font/google";
 import "./globals.css";

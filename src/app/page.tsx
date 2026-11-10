@@ -32,6 +32,7 @@ export default function Home() {
         setSelected(data.groups);
         setCo2Cap(String(data.defaultCo2Cap));
       })
+      // if the R Script is not running
       .catch(() => setLoadError("Could not reach the solver API. Is the R API running on port 8000?"));
   }, []);
 

@@ -1,0 +1,67 @@
+/*
+  base.css
+  page-wide basics: the dirt background, the grass header, and headings.
+*/
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-body), monospace;
+  font-size: var(--text-body);
+  line-height: 1.25;
+  background:
+    linear-gradient(45deg, var(--dirt-dark) 25%, transparent 25%, transparent 75%, var(--dirt-dark) 75%) 0 0 / 32px 32px,
+    linear-gradient(45deg, var(--dirt-dark) 25%, transparent 25%, transparent 75%, var(--dirt-dark) 75%) 16px 16px / 32px 32px,
+    var(--dirt);
+  background-attachment: fixed;
+  image-rendering: pixelated;
+}
+
+main {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 16px 56px;
+}
+
+header {
+  margin: 0 -16px 24px;
+  padding: 28px 16px 20px;
+  background: linear-gradient(var(--grass) 0 14px, var(--grass-dark) 14px 18px, #7a5230 18px);
+  border-bottom: 4px solid var(--black);
+}
+
+header h1 {
+  margin: 8px 0 0;
+  font-family: var(--font-pixel), monospace;
+  font-size: var(--pixel-title);
+  font-weight: 400;
+  color: var(--white);
+  text-shadow: 4px 4px 0 var(--ink);
+}
+header h1 span { color: var(--gold); }
+
+header p {
+  margin: 12px 0 0;
+  font-size: var(--text-large);
+  color: var(--white);
+  text-shadow: 2px 2px 0 var(--ink);
+}
+
+h2 {
+  margin: 18px 0 8px;
+  font-family: var(--font-pixel), monospace;
+  font-size: var(--pixel-heading);
+  font-weight: 400;
+  color: var(--ink);
+}
+h2:first-child { margin-top: 0; }
+
+h3 {
+  margin: 8px 0 0;
+  font-family: var(--font-pixel), monospace;
+  font-size: var(--pixel-subheading);
+  font-weight: 400;
+  color: var(--ink);
+}

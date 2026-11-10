@@ -1,0 +1,56 @@
+/*
+  tables.css
+  data tables used by the results tab and the tableau tab.
+  header row and first column stay fixed while scrolling.
+*/
+
+.table-scroll {
+  max-height: 560px;
+  overflow: auto;
+  background: var(--screen);
+  border: 2px solid var(--black);
+  box-shadow: var(--bevel-screen);
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-body), monospace;
+  font-size: var(--text-table);
+  color: var(--white);
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  padding: 4px 10px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid #333;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #2b2b2b;
+  color: var(--gold);
+}
+
+tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  background: #242424;
+  color: var(--green);
+  border-right: 1px solid #333;
+}
+
+thead th:first-child {
+  left: 0;
+  z-index: 3;
+}
+
+td.zero { color: #555; }
+tbody tr:hover td { background: #2f3b2f; }

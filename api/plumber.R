@@ -1,4 +1,4 @@
-# PLUMBER API (thin wrapper). All the logic is in the R/ folder.
+# PLUMBER API WRAPPER. All the logic is in the R/ folder.
 
 source("R/data.R")
 source("R/check.R")
