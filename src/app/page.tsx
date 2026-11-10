@@ -1,8 +1,16 @@
 "use client";
 
-// MAIN PAGE
-// Loads the options from the R API, keeps all the user choices in state,
-// sends them to /solve, and shows the Results or Simplex Tableau tab.
+// page.tsx
+// the main (and only) page of the app.
+// it loads the options from the r api, keeps every user choice in state,
+// sends the choices to /solve, and shows either the results tab
+// or the simplex tableau tab.
+//
+// page layout (edit the tailwind classes below):
+//   <main>   centers everything, max width 1320px
+//   <header> the grass title strip
+//   grid     controls on the left (320px), results on the right (rest of the width)
+//            on small screens it becomes one column
 
 import { useEffect, useState } from "react";
 import ControlPanel from "@/components/ControlPanel";
@@ -14,34 +22,39 @@ import type { Options, SolveResponse } from "@/lib/types";
 type Tab = "results" | "tableau";
 
 export default function Home() {
+  // options from the api (plant group names and default co2 cap)
   const [options, setOptions] = useState<Options | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
-  const [co2On, setCo2On] = useState(false);
-  const [co2Cap, setCo2Cap] = useState("");
+
+  // user choices
+  const [selected, setSelected] = useState<string[]>([]); // chosen plant groups
+  const [co2On, setCo2On] = useState(false);              // is the co2 cap switched on
+  const [co2Cap, setCo2Cap] = useState("");               // co2 limit, kept as text
+
+  // solver output and screen state
   const [result, setResult] = useState<SolveResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<Tab>("results");
   const [runId, setRunId] = useState(0); // changes on every solve so the tableau viewer resets
 
-  // On first load, ask the API for the plant groups and the default CO2 cap
+  // on first load, ask the api for the plant groups and the default co2 cap
   useEffect(() => {
     fetchOptions()
       .then((data) => {
         setOptions(data);
-        setSelected(data.groups);
+        setSelected(data.groups); // start with every group selected
         setCo2Cap(String(data.defaultCo2Cap));
       })
-      // if the R Script is not running
+      // happens when the r script is not running
       .catch(() => setLoadError("Could not reach the solver API. Is the R API running on port 8000?"));
   }, []);
 
-  // Add or remove one plant group from the selection
+  // add or remove one plant group from the selection
   function toggleGroup(group: string) {
     setSelected((now) => (now.includes(group) ? now.filter((g) => g !== group) : [...now, group]));
   }
 
-  // Send the choices to the R solver and show the result
+  // send the choices to the r solver and show the result
   async function handleSolve() {
     setLoading(true);
     try {
@@ -55,21 +68,28 @@ export default function Home() {
     }
   }
 
+  // the tableau tab only works when the solver returned tableaus
   const hasTableaus = result?.tableaus && result.tableaus.length > 0;
 
   return (
-    <main>
-      <header>
-        <h1>
-          Luzon <span>GridSim</span>
+    <main className="mx-auto max-w-[1320px] px-4 pb-14">
+      {/* header: -mx-4 cancels the main padding so the strip reaches the screen edges */}
+      <header className="grass-strip -mx-4 mb-6 border-b-4 border-black px-4 pb-5 pt-7">
+        <h1 className="mt-2 font-pixel text-pixel-title font-normal text-white pixel-shadow">
+          Luzon <span className="text-gold">GridSim</span>
         </h1>
-        <p>Craft the cheapest way to power Luzon for one day. Solved with the simplex method.</p>
+        <p className="mt-3 text-large text-white pixel-shadow-sm">
+          Craft the cheapest way to power Luzon for one day. Solved with the simplex method.
+        </p>
       </header>
 
-      {loadError && <p className="banner warning">{loadError}</p>}
+      {loadError && <p className="banner border-red text-red">{loadError}</p>}
 
+      {/* the app only shows after the options are loaded */}
       {options && (
-        <div className="layout">
+        // one column on small screens, two columns (320px | rest) from md up
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[320px_minmax(0,1fr)]">
+          {/* left side: controls */}
           <ControlPanel
             groups={options.groups}
             selected={selected}
@@ -84,13 +104,18 @@ export default function Home() {
             loading={loading}
           />
 
-          <section className="card">
-            <div className="tabs">
-              <button className={tab === "results" ? "active" : ""} onClick={() => setTab("results")}>
+          {/* right side: tabs and their content */}
+          <section className="panel w-full p-4">
+            {/* tab buttons share the row equally; the active one turns green */}
+            <div className="mb-4 flex gap-1.5">
+              <button
+                className={`btn flex-1 ${tab === "results" ? "btn-grass" : ""}`}
+                onClick={() => setTab("results")}
+              >
                 Results
               </button>
               <button
-                className={tab === "tableau" ? "active" : ""}
+                className={`btn flex-1 ${tab === "tableau" ? "btn-grass" : ""}`}
                 onClick={() => setTab("tableau")}
                 disabled={!hasTableaus}
               >
@@ -98,7 +123,7 @@ export default function Home() {
               </button>
             </div>
 
-            {!result && <p className="hint">Pick your plant slots and press Solve.</p>}
+            {!result && <p>Pick your plant slots and press Solve.</p>}
             {result && tab === "results" && <ResultsTab result={result} />}
             {result && tab === "tableau" && hasTableaus && <TableauTab key={runId} steps={result.tableaus!} />}
           </section>

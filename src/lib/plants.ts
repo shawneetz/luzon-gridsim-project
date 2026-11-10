@@ -1,8 +1,7 @@
-// plants.ts
-// one place that holds the color, icon, and tag of each plant group.
-// the slots, the chart, and the legend all read from here, so colors stay consistent.
-// colors are loosely inspired by minecraft materials (lava, water, gold, ...).
-// to add or restyle a plant group, edit plantStyles below.
+// PLANT STYLES
+// One place that holds the color, icon, and tag of each plant group.
+// The slots, the chart, and the legend all read from here, so colors stay consistent.
+// Colors are loosely inspired by Minecraft materials (lava, water, gold, ...).
 
 export interface PlantStyle {
   color: string; // main color of the group
@@ -20,12 +19,12 @@ export const plantStyles: Record<string, PlantStyle> = {
   "Wind":        { color: "#7fe3d8", icon: "🌬️", tag: "AIR" },
 };
 
-// fallback in case the api ever sends a group we do not know
+// Fallback in case the API ever sends a group we do not know
 export const defaultStyle: PlantStyle = { color: "#adb5bd", icon: "⚡", tag: "POWER" };
 
 export function styleOf(group: string): PlantStyle {
   return plantStyles[group] ?? defaultStyle;
 }
 
-// time of day for each 4-hour block (b1 to b6), shown on the chart and the price slots
+// Time of day for each 4-hour block (B1 to B6), shown on the chart and the price slots
 export const blockIcons = ["🌙", "🌅", "☀️", "☀️", "🌇", "🌙"];

@@ -1,23 +1,172 @@
 /*
   globals.css
-  the only css file next loads directly. it just pulls in tailwind and
-  then each style file. to restyle the app, edit the files in src/styles:
-    theme.css    colors, bevel shadows, font sizes (start here)
-    base.css     page background, header, headings
-    layout.css   page grid, cards, tabs
-    controls.css checkboxes, inputs, buttons
-    plants.css   plant slots in the control panel
-    banners.css  success, warning, and "you died" banners
-    results.css  stat boxes, dispatch chart, price slots
-    tables.css   data tables (results and tableau)
+  the only css file in the app. it has three parts:
+    1) @theme      design tokens (colors, fonts, sizes, shadows). each token
+                   becomes a tailwind class, e.g. --color-gold -> text-gold, bg-gold
+    2) @utility    small custom classes for the hard pixel text shadows
+    3) components  reusable looks (btn, panel, slot, screen, banner, ...)
+  layout (grid, flex, spacing, widths) is NOT here. it is written as tailwind
+  classes directly in the .tsx files, so you change it where you see it.
 */
 @import "tailwindcss";
 
-@import "../styles/theme.css";
-@import "../styles/base.css";
-@import "../styles/layout.css";
-@import "../styles/controls.css";
-@import "../styles/plants.css";
-@import "../styles/banners.css";
-@import "../styles/results.css";
-@import "../styles/tables.css";
+/* ---------- 1) THEME TOKENS ---------- */
+
+/* fonts come from layout.tsx (next/font), we just give them tailwind names:
+   font-pixel = titles and buttons, font-body = text, numbers, tables */
+@theme inline {
+  --font-pixel: var(--next-font-pixel), monospace;
+  --font-body: var(--next-font-body), monospace;
+}
+
+@theme {
+  /* colors: use them as bg-grass, text-gold, border-panel-dark, ... */
+  --color-dirt: #6b4a2f;          /* page background */
+  --color-dirt-dark: #5a3d26;     /* darker squares of the dirt pattern */
+  --color-soil: #7a5230;          /* under the grass strip in the header */
+  --color-grass: #5fa83a;         /* grass strip, solve button, active tab */
+  --color-grass-dark: #3f7a24;
+  --color-grass-light: #9be06f;
+  --color-grass-hover: #6fc247;
+  --color-panel: #c6c6c6;         /* inventory panel gray */
+  --color-panel-light: #ffffff;
+  --color-panel-dark: #555555;
+  --color-slot: #8b8b8b;          /* empty slot gray */
+  --color-slot-hover: #a0a0a0;
+  --color-slot-selected: #b8b8b8;
+  --color-slot-edge: #373737;
+  --color-stone: #7a7a7a;         /* button gray */
+  --color-stone-hover: #6f7fb8;   /* button gray on hover (blue-ish) */
+  --color-screen: #1b1b1b;        /* dark screens (tables, chart, stat boxes) */
+  --color-screen-edge: #3a3a3a;
+  --color-ink: #3f3f3f;           /* text on gray panels */
+  --color-ink-soft: #4a4a4a;      /* smaller secondary text */
+  --color-gold: #ffd83d;          /* highlights and numbers */
+  --color-green: #55ff55;         /* success text */
+  --color-red: #ff5555;           /* danger text */
+  --color-redstone: #ff3030;      /* demand line in the chart */
+  --color-death: rgba(150, 10, 10, 0.92); /* infeasible banner */
+  --color-disabled: #a0a0a0;      /* text of a disabled button */
+  --color-label: #aaaaaa;         /* small label above a stat value */
+  --color-chart-text: #cfcfcf;    /* chart labels and legend */
+  --color-head: #2b2b2b;          /* table column header background */
+  --color-rowhead: #242424;       /* table row label background */
+  --color-line: #333333;          /* table lines */
+  --color-row-hover: #2f3b2f;     /* table row on hover */
+  --color-dim: #555555;           /* zeros in tables */
+
+  /* font sizes: use them as text-body, text-large, text-pixel-title, ... */
+  --text-body: 1.25rem;
+  --text-large: 1.5rem;
+  --text-small: 1.1rem;
+  --text-table: 1.15rem;
+  --text-input: 1.3rem;
+  --text-stat: 1.9rem;            /* big number in a stat box */
+  --text-price: 1.4rem;           /* number in a price slot */
+  --text-pixel-title: 1.9rem;     /* page title */
+  --text-pixel-death: 1.4rem;     /* "you died!" */
+  --text-pixel-heading: 0.8rem;   /* h2 */
+  --text-pixel-sub: 0.75rem;      /* h3 */
+  --text-pixel-button: 0.7rem;
+  --text-pixel-label: 0.65rem;
+  --text-pixel-tiny: 0.5rem;
+
+  /* bevel shadows (the 3d look of minecraft ui): use as shadow-panel, ... */
+  /* raised panel: light top-left, dark bottom-right */
+  --shadow-panel: inset 4px 4px 0 var(--color-panel-light), inset -4px -4px 0 var(--color-panel-dark);
+  /* slot and price cell: the opposite, dark top-left, light bottom-right */
+  --shadow-slot: inset 3px 3px 0 var(--color-slot-edge), inset -3px -3px 0 #ffffff;
+  /* dark screen: tables, chart, stat boxes */
+  --shadow-screen: inset 3px 3px 0 #000000, inset -3px -3px 0 var(--color-screen-edge);
+  /* stone button: normal, hover, pressed */
+  --shadow-btn: inset 3px 3px 0 #b5b5b5, inset -3px -3px 0 #4a4a4a;
+  --shadow-btn-hover: inset 3px 3px 0 #a9b7ee, inset -3px -3px 0 #46528a;
+  --shadow-btn-pressed: inset -3px -3px 0 #b5b5b5, inset 3px 3px 0 #4a4a4a;
+  /* grass button (solve button and active tab): normal and hover */
+  --shadow-grass: inset 3px 3px 0 var(--color-grass-light), inset -3px -3px 0 var(--color-grass-dark);
+  --shadow-grass-hover: inset 3px 3px 0 #b6f28f, inset -3px -3px 0 var(--color-grass-dark);
+
+  /* shake animation for the infeasible banner: use as animate-shake */
+  --animate-shake: shake 0.5s 2;
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+}
+
+/* ---------- 2) PIXEL TEXT SHADOWS ---------- */
+/* hard shadows without blur, like the in-game text */
+@utility pixel-shadow    { text-shadow: 4px 4px 0 var(--color-ink); }
+@utility pixel-shadow-sm { text-shadow: 2px 2px 0 var(--color-ink); }
+@utility gold-shadow     { text-shadow: 2px 2px 0 #3f3f00; }
+
+/* ---------- 3) PAGE BASICS ---------- */
+@layer base {
+  /* dirt: a repeating pattern of darker and lighter brown squares */
+  body {
+    @apply font-body text-body leading-tight text-ink;
+    background:
+      linear-gradient(45deg, var(--color-dirt-dark) 25%, transparent 25%, transparent 75%, var(--color-dirt-dark) 75%) 0 0 / 32px 32px,
+      linear-gradient(45deg, var(--color-dirt-dark) 25%, transparent 25%, transparent 75%, var(--color-dirt-dark) 75%) 16px 16px / 32px 32px,
+      var(--color-dirt);
+    background-attachment: fixed;
+    image-rendering: pixelated;
+  }
+}
+
+/* ---------- 4) REUSABLE LOOKS ---------- */
+/* add these class names in the tsx files. extra tailwind classes on the
+   same element (padding, width, margin) are added on top. */
+@layer components {
+  /* the grass strip on top of the header, like the top of a grass block */
+  .grass-strip {
+    background: linear-gradient(var(--color-grass) 0 14px, var(--color-grass-dark) 14px 18px, var(--color-soil) 18px);
+  }
+
+  /* gray inventory panel (the cards) */
+  .panel {
+    @apply border-4 border-black bg-panel shadow-panel;
+  }
+
+  /* dark screen (tables, chart, stat boxes) */
+  .screen {
+    @apply border-2 border-black bg-screen shadow-screen;
+  }
+
+  /* inventory slot (plant slots and price slots) */
+  .slot {
+    @apply cursor-pointer border-2 border-slot-edge bg-slot shadow-slot;
+  }
+
+  /* section headings inside a panel */
+  .heading {
+    @apply mb-2 mt-4 font-pixel text-pixel-heading text-ink first:mt-0;
+  }
+  .subheading {
+    @apply mt-2 font-pixel text-pixel-sub text-ink;
+  }
+
+  /* stone button. hover:enabled means "only when the button is not disabled" */
+  .btn {
+    @apply cursor-pointer rounded-none border-2 border-black bg-stone px-3.5 py-3 font-pixel text-pixel-button text-white pixel-shadow-sm shadow-btn;
+    @apply hover:enabled:bg-stone-hover hover:enabled:shadow-btn-hover active:enabled:shadow-btn-pressed;
+    @apply disabled:cursor-not-allowed disabled:text-disabled;
+  }
+
+  /* add next to .btn to make it green (solve button, active tab) */
+  .btn-grass {
+    @apply bg-grass shadow-grass hover:enabled:bg-grass-hover hover:enabled:shadow-grass-hover;
+  }
+
+  /* black text input and dropdown, like the in-game text fields */
+  .field-input {
+    @apply rounded-none border-2 border-panel-dark bg-black px-2.5 py-1.5 font-body text-input text-white;
+    @apply focus:border-white focus:outline-none disabled:opacity-50;
+  }
+
+  /* message box at the top of the results (success, warning, death) */
+  .banner {
+    @apply border-4 border-panel-dark bg-black px-4 py-3.5 text-large text-white;
+  }
+}
