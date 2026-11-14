@@ -4,7 +4,7 @@
     1) @theme      design tokens (colors, fonts, sizes, shadows). each token
                    becomes a tailwind class, e.g. --color-gold -> text-gold, bg-gold
     2) @utility    small custom classes for the hard pixel text shadows
-    3) components  reusable looks (btn, panel, slot, screen, banner, ...)
+    3) components  reusable looks (btn, panel, slot, screen, banner, menu-bg, ...)
   layout (grid, flex, spacing, widths) is NOT here. it is written as tailwind
   classes directly in the .tsx files, so you change it where you see it.
 */
@@ -93,6 +93,13 @@
     25% { transform: translateX(-6px); }
     75% { transform: translateX(6px); }
   }
+
+  /* splash text on the landing page: tilted and pulsing, use as animate-splash */
+  --animate-splash: splash 0.6s ease-in-out infinite alternate;
+  @keyframes splash {
+    from { transform: rotate(-15deg) scale(1); }
+    to { transform: rotate(-15deg) scale(1.12); }
+  }
 }
 
 /* ---------- 2) PIXEL TEXT SHADOWS ---------- */
@@ -100,6 +107,8 @@
 @utility pixel-shadow    { text-shadow: 4px 4px 0 var(--color-ink); }
 @utility pixel-shadow-sm { text-shadow: 2px 2px 0 var(--color-ink); }
 @utility gold-shadow     { text-shadow: 2px 2px 0 #3f3f00; }
+/* thick dark shadow for the big logo letters on the landing page */
+@utility logo-shadow     { text-shadow: 4px 4px 0 #1e1e1e, 7px 7px 0 #000000; }
 
 /* ---------- 3) PAGE BASICS ---------- */
 @layer base {
@@ -122,6 +131,16 @@
   /* the grass strip on top of the header, like the top of a grass block */
   .grass-strip {
     background: linear-gradient(var(--color-grass) 0 14px, var(--color-grass-dark) 14px 18px, var(--color-soil) 18px);
+  }
+
+  /* landing page background: sky on top, grass and dirt ground at the bottom,
+     dark edges (vignette) around it. this is the part to replace when the
+     background becomes interactive. */
+  .menu-bg {
+    background:
+      linear-gradient(var(--color-grass) 0 16px, var(--color-grass-dark) 16px 20px, var(--color-dirt) 20px) bottom / 100% 28% no-repeat,
+      linear-gradient(#5aa0e8, #bfe0ff);
+    box-shadow: inset 0 0 160px rgba(0, 0, 0, 0.6);
   }
 
   /* gray inventory panel (the cards) */

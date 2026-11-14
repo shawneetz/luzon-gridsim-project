@@ -104,7 +104,7 @@ function Stat({ label, value, className = "" }: { label: string; value: string; 
     <div className={`screen flex min-w-0 flex-col px-3 py-2.5 ${className}`}>
       <span className="text-small text-label">{label}</span>
       {/* break-words lets a very long number wrap instead of overflowing the box */}
-      <span className="break-words text-stat leading-[1.1] text-gold gold-shadow">{value}</span>
+      <span className="warp-break-word text-stat leading-[1.1] text-gold gold-shadow">{value}</span>
     </div>
   );
 }

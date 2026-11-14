@@ -2,18 +2,20 @@
 
 // page.tsx
 // the main (and only) page of the app.
-// it loads the options from the r api, keeps every user choice in state,
-// sends the choices to /solve, and shows either the results tab
-// or the simplex tableau tab.
+// it first shows the landing page (title screen). after the player presses
+// "Start Simulation" it shows the simulator: it loads the options from the
+// r api, keeps every user choice in state, sends the choices to /solve,
+// and shows either the results tab or the simplex tableau tab.
 //
 // page layout (edit the tailwind classes below):
 //   <main>   centers everything, max width 1320px
-//   <header> the grass title strip
+//   <header> the grass title strip (with a "Main Menu" button on the right)
 //   grid     controls on the left (320px), results on the right (rest of the width)
 //            on small screens it becomes one column
 
 import { useEffect, useState } from "react";
 import ControlPanel from "@/components/ControlPanel";
+import LandingPage from "@/components/LandingPage";
 import ResultsTab from "@/components/ResultsTab";
 import TableauTab from "@/components/TableauTab";
 import { fetchOptions, solve } from "@/lib/api";
@@ -22,6 +24,9 @@ import type { Options, SolveResponse } from "@/lib/types";
 type Tab = "results" | "tableau";
 
 export default function Home() {
+  // false = show the landing page, true = show the simulator
+  const [started, setStarted] = useState(false);
+
   // options from the api (plant group names and default co2 cap)
   const [options, setOptions] = useState<Options | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -71,16 +76,24 @@ export default function Home() {
   // the tableau tab only works when the solver returned tableaus
   const hasTableaus = result?.tableaus && result.tableaus.length > 0;
 
+  // title screen first; the choices and results above are kept when going back and forth
+  if (!started) return <LandingPage onStart={() => setStarted(true)} />;
+
   return (
-    <main className="mx-auto max-w-[1320px] px-4 pb-14">
+    <main className="mx-auto w-510 px-4 pb-10">
       {/* header: -mx-4 cancels the main padding so the strip reaches the screen edges */}
-      <header className="grass-strip -mx-4 mb-6 border-b-4 border-black px-4 pb-5 pt-7">
-        <h1 className="mt-2 font-pixel text-pixel-title font-normal text-white pixel-shadow">
+      <header className="grass-strip relative -mx-4 mb-6 border-b-4 border-black px-4 pb-5 pt-7">
+        <h1 className="ml-10 mt-2 font-pixel text-pixel-title font-normal text-white pixel-shadow">
           Luzon <span className="text-gold">GridSim</span>
         </h1>
-        <p className="mt-3 text-large text-white pixel-shadow-sm">
+        <p className="ml-10 *:mt-3 text-large text-white pixel-shadow-sm">
           Craft the cheapest way to power Luzon for one day. Solved with the simplex method.
         </p>
+
+        {/* goes back to the landing page */}
+        <button type="button" className="btn absolute right-10 top-7" onClick={() => setStarted(false)}>
+          Main Menu
+        </button>
       </header>
 
       {loadError && <p className="banner border-red text-red">{loadError}</p>}
