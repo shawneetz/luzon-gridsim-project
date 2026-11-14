@@ -6,19 +6,22 @@
 // it holds one bit of state (is the info box open); everything else
 // comes in through props.
 //
-// background: it is ONE element, <div className="menu-bg" />. to make the
-// background interactive later, replace that element (e.g. with a canvas)
-// and nothing else in this file has to change.
+// styling: everything is tailwind classes written in this file.
+// the only things that live in globals.css are the shared looks
+// (.btn, .panel) and the splash keyframes (animate-splash).
 //
-// layout (edit the tailwind classes below):
-//   the wrapper centers everything in the middle of the screen
-//   the footer texts sit in the bottom corners, like minecraft's version text
+// background: ONE container (the first div) with a sky gradient and two
+// children (ground, vignette). to make the background interactive later,
+// replace that container (e.g. with a canvas) and nothing else has to change.
 
 import { useState } from "react";
 
 interface Props {
   onStart: () => void; // called when the player presses "Start Simulation"
 }
+
+// thick dark shadow for the big logo letters (used on both words)
+const logoShadow = "[text-shadow:4px_4px_0_#1e1e1e,7px_7px_0_#000000]";
 
 export default function LandingPage({ onStart }: Props) {
   // is the "how it works" box open
@@ -27,13 +30,18 @@ export default function LandingPage({ onStart }: Props) {
   return (
     // isolate keeps the background (-z-10) inside this wrapper
     <div className="relative isolate flex min-h-screen flex-col items-center justify-center gap-12 px-4">
-      {/* background: swap this element for the interactive one later */}
-      <div className="menu-bg absolute inset-0 -z-10" />
+      {/* background: sky gradient, with the ground and a dark edge on top of it */}
+      <div className="absolute inset-0 -z-10 bg-linear-to-b from-[#5aa0e8] to-[#bfe0ff]">
+        {/* ground: grass border on top, dirt below, and a darker grass line under the border */}
+        <div className="absolute inset-x-0 bottom-0 h-[28%] border-t-16 border-grass bg-dirt shadow-[inset_0_4px_0_var(--color-grass-dark)]" />
+        {/* vignette: dark edges around the screen */}
+        <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_160px_rgba(0,0,0,0.6)]" />
+      </div>
 
       {/* logo: two stacked words, the splash text is pinned to its bottom right */}
       <h1 className="relative text-center font-pixel font-normal leading-tight">
-        <span className="logo-shadow block text-5xl text-panel md:text-6xl">LUZON</span>
-        <span className="logo-shadow block text-5xl text-gold md:text-6xl">GRIDSIM</span>
+        <span className={`block text-5xl text-panel md:text-6xl ${logoShadow}`}>LUZON</span>
+        <span className={`block text-5xl text-gold md:text-6xl ${logoShadow}`}>GRIDSIM</span>
         <span className="gold-shadow absolute -bottom-6 -right-4 w-max animate-splash font-body text-large text-gold md:-right-20">
           Cheapest power in Luzon!
         </span>
