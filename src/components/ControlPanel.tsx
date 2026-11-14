@@ -1,10 +1,12 @@
 // ControlPanel.tsx
 // left side of the page: plant group slots, the co2 cap toggle, and the solve button.
 // each plant group is an inventory slot you click to select (white frame) or unselect.
+// the slot shows the plant's image (from lib/plants.ts) above its name.
 // this component holds no state; the page passes everything in through props.
 //
 // layout (edit the tailwind classes below):
 //   plant slots are a 2 column grid. change grid-cols-2 for more or fewer columns.
+//   image size is the size-10 class on the <img> (40px). change it to resize all icons.
 
 import { styleOf } from "@/lib/plants";
 
@@ -57,7 +59,15 @@ export default function ControlPanel(props: Props) {
               aria-pressed={isOn}
               onClick={() => props.onToggleGroup(group)}
             >
-              <span className="text-3xl leading-none">{style.icon}</span>
+              {/* fixed 40px box: object-contain fits any image size without stretching,
+                  pixelated keeps pixel art sharp. plain <img> keeps this simple,
+                  so the next/image lint rule is switched off for this line. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={style.image}
+                alt=""
+                className="size-10 object-contain [image-rendering:pixelated]"
+              />
               <span className="font-body text-input leading-none">{group}</span>
               <span className="font-pixel text-pixel-tiny text-ink-soft">{style.tag}</span>
             </button>
