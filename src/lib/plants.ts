@@ -3,27 +3,42 @@
 // the slots, the chart, and the legend all read from here, so colors stay consistent.
 // colors are loosely inspired by minecraft materials (lava, water, gold, ...).
 //
-// images live in next-app/public/plants/. a path starting with "/" is served
-// straight from the public folder, so "/plants/coal.webp" is public/plants/coal.webp.
+// images live in src/assets/plants/ and are imported like code, so next.js
+// bundles them and gives each one the right url (no manual paths, no base path).
+// a wrong file name here shows up as a "module not found" error at build time.
+
+import coal from "@/assets/plants/coal.webp";
+import naturalGas from "@/assets/plants/natural-gas.webp";
+import geothermal from "@/assets/plants/geothermal.webp";
+import hydro from "@/assets/plants/hydro.webp";
+import oil from "@/assets/plants/oil-based.webp";
+import solar from "@/assets/plants/solar.webp";
+import wind from "@/assets/plants/wind.webp";
 
 export interface PlantStyle {
   color: string; // main color of the group
-  image: string; // image shown in the inventory slot
+  image: string; // image url shown in the inventory slot
   tag: string;   // short label shown under the name
 }
 
+// an imported image is an object; its .src is the url the <img> tag needs
 export const plantStyles: Record<string, PlantStyle> = {
-  "Coal":        { color: "#6b6b6b", image: "/plants/coal.webp",        tag: "FUEL" },
-  "Natural Gas": { color: "#e8833a", image: "/plants/natural-gas.webp", tag: "BLAZE" },
-  "Geothermal":  { color: "#e03c1f", image: "/plants/geothermal.webp",  tag: "LAVA" },
-  "Hydro":       { color: "#3f76e4", image: "/plants/hydro.webp",       tag: "WATER" },
-  "Oil-based":   { color: "#8e4fc7", image: "/plants/oil-based.webp",   tag: "BARREL" },
-  "Solar":       { color: "#f9d835", image: "/plants/solar.webp",       tag: "DAYLIGHT" },
-  "Wind":        { color: "#7fe3d8", image: "/plants/wind.webp",        tag: "AIR" },
+  "Coal":        { color: "#6b6b6b", image: coal.src,       tag: "FUEL" },
+  "Natural Gas": { color: "#e8833a", image: naturalGas.src, tag: "BLAZE" },
+  "Geothermal":  { color: "#e03c1f", image: geothermal.src, tag: "LAVA" },
+  "Hydro":       { color: "#3f76e4", image: hydro.src,      tag: "WATER" },
+  "Oil-based":   { color: "#8e4fc7", image: oil.src,        tag: "BARREL" },
+  "Solar":       { color: "#f9d835", image: solar.src,      tag: "DAYLIGHT" },
+  "Wind":        { color: "#7fe3d8", image: wind.src,       tag: "AIR" },
 };
 
-// fallback in case the api ever sends a group we do not know
-export const defaultStyle: PlantStyle = { color: "#adb5bd", image: "/plants/default.webp", tag: "POWER" };
+// fallback in case the api ever sends a group we do not know.
+// a 1x1 transparent image, so no extra file is needed.
+export const defaultStyle: PlantStyle = {
+  color: "#adb5bd",
+  image: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+  tag: "POWER",
+};
 
 export function styleOf(group: string): PlantStyle {
   return plantStyles[group] ?? defaultStyle;
