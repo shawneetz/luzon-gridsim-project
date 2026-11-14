@@ -3,17 +3,17 @@
 // the slots, the chart, and the legend all read from here, so colors stay consistent.
 // colors are loosely inspired by minecraft materials (lava, water, gold, ...).
 //
-// images live in src/assets/plants/ and are imported like code, so next.js
+// images live in src/assets/ and are imported like code, so next.js
 // bundles them and gives each one the right url (no manual paths, no base path).
 // a wrong file name here shows up as a "module not found" error at build time.
 
-import coal from "@/assets/plants/coal.webp";
-import naturalGas from "@/assets/plants/natural-gas.webp";
-import geothermal from "@/assets/plants/geothermal.webp";
-import hydro from "@/assets/plants/hydro.webp";
-import oil from "@/assets/plants/oil-based.webp";
-import solar from "@/assets/plants/solar.webp";
-import wind from "@/assets/plants/wind.webp";
+import coal from "@/assets/minecraft-coal.webp";
+import fire from "@/assets/minecraft-fire.webp";
+import lava from "@/assets/minecraft-lava.webp";
+import water from "@/assets/minecraft-water.webp";
+import barrel from "@/assets/minecraft-barrel.webp";
+import sun from "@/assets/minecraft-sun.webp";
+import wind from "@/assets/minecraft-wind.webp";
 
 export interface PlantStyle {
   color: string; // main color of the group
@@ -23,13 +23,13 @@ export interface PlantStyle {
 
 // an imported image is an object; its .src is the url the <img> tag needs
 export const plantStyles: Record<string, PlantStyle> = {
-  "Coal":        { color: "#6b6b6b", image: coal.src,       tag: "FUEL" },
-  "Natural Gas": { color: "#e8833a", image: naturalGas.src, tag: "BLAZE" },
-  "Geothermal":  { color: "#e03c1f", image: geothermal.src, tag: "LAVA" },
-  "Hydro":       { color: "#3f76e4", image: hydro.src,      tag: "WATER" },
-  "Oil-based":   { color: "#8e4fc7", image: oil.src,        tag: "BARREL" },
-  "Solar":       { color: "#f9d835", image: solar.src,      tag: "DAYLIGHT" },
-  "Wind":        { color: "#7fe3d8", image: wind.src,       tag: "AIR" },
+  "Coal":        { color: "#6b6b6b", image: coal.src,   tag: "FUEL" },
+  "Natural Gas": { color: "#e8833a", image: fire.src,   tag: "BLAZE" },
+  "Geothermal":  { color: "#e03c1f", image: lava.src,   tag: "LAVA" },
+  "Hydro":       { color: "#3f76e4", image: water.src,  tag: "WATER" },
+  "Oil-based":   { color: "#8e4fc7", image: barrel.src, tag: "BARREL" },
+  "Solar":       { color: "#f9d835", image: sun.src,    tag: "DAYLIGHT" },
+  "Wind":        { color: "#7fe3d8", image: wind.src,   tag: "AIR" },
 };
 
 // fallback in case the api ever sends a group we do not know.
