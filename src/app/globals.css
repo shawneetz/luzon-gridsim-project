@@ -1,13 +1,19 @@
 /*
   globals.css
-  the only css file in the app. it has three parts:
+  the only css file in the app. it has four parts:
     1) @theme      design tokens (colors, fonts, sizes, shadows, animations). each
                    token becomes a tailwind class, e.g. --color-gold -> text-gold, bg-gold
     2) @utility    small custom classes for the hard pixel text shadows
-    3) components  looks that are reused in many places (btn, panel, slot, screen, ...)
-  layout and one-off styling (grid, flex, spacing, widths, backgrounds) is NOT here.
+    3) base        page background and the reduced motion rule
+    4) components  looks that are reused in many places (btn, panel, slot, screen, ...)
+  layout and one-off styling (grid, flex, spacing, widths, backgrounds) is NOT here
   it is written as tailwind classes directly in the .tsx files, so you change it
-  where you see it.
+  where you see it
+
+  new in this version (phase 1.3 of the ui revamp):
+    - tooltip, xp bar, hotbar, sky, cloud and dark stone color tokens
+    - drift, bob and twinkle animations
+    - a prefers-reduced-motion rule that turns every animation off
 */
 @import "tailwindcss";
 
@@ -38,6 +44,7 @@
   --color-slot-edge: #373737;
   --color-stone: #7a7a7a;         /* button gray */
   --color-stone-hover: #6f7fb8;   /* button gray on hover (blue-ish) */
+  --color-stone-dark: #606060;    /* darker stone: far hills, ground details, pressed states */
   --color-screen: #1b1b1b;        /* dark screens (tables, chart, stat boxes) */
   --color-screen-edge: #3a3a3a;
   --color-ink: #3f3f3f;           /* text on gray panels */
@@ -55,6 +62,17 @@
   --color-line: #333333;          /* table lines */
   --color-row-hover: #2f3b2f;     /* table row on hover */
   --color-dim: #555555;           /* zeros in tables */
+
+  /* new tokens for the revamp (not used by any component yet) */
+  --color-tooltip-bg: #100010;      /* item tooltip background, near black purple */
+  --color-tooltip-border: #2d0a63;  /* item tooltip frame, dark purple */
+  --color-xp: #7efc20;              /* xp bar fill (iteration navigator) */
+  --color-hotbar: #373737;          /* hotbar and xp bar background */
+  --color-sky-top: #5aa0e8;         /* day sky, top of the gradient */
+  --color-sky-bottom: #bfe0ff;      /* day sky, near the horizon */
+  --color-sky-night-top: #0a0f2c;   /* night sky, top of the gradient */
+  --color-sky-night-bottom: #1b2a5a;/* night sky, near the horizon */
+  --color-cloud: #ffffff;           /* cloud blocks */
 
   /* font sizes: use them as text-body, text-large, text-pixel-title, ... */
   --text-body: 1.25rem;
@@ -103,6 +121,33 @@
     from { transform: rotate(-15deg) scale(1); }
     to { transform: rotate(-15deg) scale(1.12); }
   }
+
+  /* cloud drift: slides a cloud from just off the left edge to past the right edge
+     use as animate-drift, then change the speed per cloud with an arbitrary
+     duration like [animation-duration:90s] and offset it with a negative delay
+     like [animation-delay:-30s] so the clouds do not all start together
+     vw units keep the path the same on any screen width */
+  --animate-drift: drift 60s linear infinite;
+  @keyframes drift {
+    from { transform: translateX(-30vw); }
+    to { transform: translateX(130vw); }
+  }
+
+  /* bob: a small up and down float, for item icons and the splash-like hints
+     use as animate-bob. the steps() timing keeps the movement chunky like pixel art */
+  --animate-bob: bob 1.2s steps(4, jump-none) infinite alternate;
+  @keyframes bob {
+    from { transform: translateY(0); }
+    to { transform: translateY(-6px); }
+  }
+
+  /* twinkle: stars that fade in and out, use as animate-twinkle
+     set a different [animation-delay:...] on each star so they do not blink together */
+  --animate-twinkle: twinkle 2s ease-in-out infinite alternate;
+  @keyframes twinkle {
+    from { opacity: 1; }
+    to { opacity: 0.2; }
+  }
 }
 
 /* ---------- 2) PIXEL TEXT SHADOWS ---------- */
@@ -123,12 +168,27 @@
     background-attachment: fixed;
     image-rendering: pixelated;
   }
+
+  /* reduced motion: people who ask their system for less motion get no animation at all
+     we use "animation: none" instead of a very short duration on purpose,
+     because a short duration would freeze a cloud at the END of its drift (off screen),
+     while "none" leaves it at its starting position
+     every animate-* class from the theme must be listed here, add new ones to this list */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-shake,
+    .animate-splash,
+    .animate-drift,
+    .animate-bob,
+    .animate-twinkle {
+      animation: none;
+    }
+  }
 }
 
 /* ---------- 4) REUSABLE LOOKS ---------- */
 /* add these class names in the tsx files. extra tailwind classes on the
-   same element (padding, width, margin) are added on top.
-   only looks that are used in several places belong here. */
+   same element (padding, width, margin) are added on top
+   only looks that are used in several places belong here */
 @layer components {
   /* the grass strip on top of the header, like the top of a grass block */
   .grass-strip {
