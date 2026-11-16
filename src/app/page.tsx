@@ -1,15 +1,16 @@
 "use client";
 
 // page.tsx
-// the main (and only) page of the app.
+// the main page of the app
 // it first shows the landing page (title screen). after the player presses
 // "Start Simulation" it shows the simulator: it loads the options from the
 // r api, keeps every user choice in state, sends the choices to /solve,
-// and shows either the results tab or the simplex tableau tab.
+// and shows either the results tab or the simplex tableau tab
 //
 // page layout (edit the tailwind classes below):
-//   <main>   centers everything, max width 1320px
+//   <main>   full width, so the grass strip can reach both screen edges
 //   <header> the grass title strip (with a "Main Menu" button on the right)
+//            its inner wrapper is capped at 1320px, same as the content below
 //   grid     controls on the left (320px), results on the right (rest of the width)
 //            on small screens it becomes one column
 
@@ -21,8 +22,31 @@ import TableauTab from "@/components/TableauTab";
 import { fetchOptions, solve } from "@/lib/api";
 import type { Options, SolveResponse } from "@/lib/types";
 
+/** the two tabs on the right side of the simulator */
 type Tab = "results" | "tableau";
 
+/**
+ * root page of the app: landing screen first, then the simulator
+ *
+ * @remarks
+ * this is a client component ("use client") because it owns all of the
+ * interactive state (selection, co2 toggle, solver result) and calls the
+ * r api from the browser through `lib/api.ts`
+ *
+ * edge cases:
+ * - the simulator stays hidden until `/options` answers; if the r api is
+ *   down, a red banner is shown instead of the controls
+ * - state is kept when the player goes back to the landing page, so the
+ *   previous choices and results are still there on return
+ * - `runId` changes on every solve, which remounts the tableau viewer so
+ *   it always starts at iteration 0
+ *
+ * @example
+ * ```tsx
+ * // app router renders this file at "/" automatically, no props needed
+ * export default function Home() { ... }
+ * ```
+ */
 export default function Home() {
   // false = show the landing page, true = show the simulator
   const [started, setStarted] = useState(false);
@@ -54,12 +78,23 @@ export default function Home() {
       .catch(() => setLoadError("Could not reach the solver API. Is the R API running on port 8000?"));
   }, []);
 
-  // add or remove one plant group from the selection
+  /**
+   * adds the group to the selection, or removes it if it is already selected
+   *
+   * @param group - plant group name exactly as the api sent it, e.g. "Natural Gas"
+   */
   function toggleGroup(group: string) {
     setSelected((now) => (now.includes(group) ? now.filter((g) => g !== group) : [...now, group]));
   }
 
-  // send the choices to the r solver and show the result
+  /**
+   * sends the current choices to the r solver and shows the result
+   *
+   * @remarks
+   * never throws: a network failure is turned into a result with
+   * `status: "error"` so the ui shows a message instead of crashing
+   * the loading flag is always reset in `finally`
+   */
   async function handleSolve() {
     setLoading(true);
     try {
@@ -80,68 +115,74 @@ export default function Home() {
   if (!started) return <LandingPage onStart={() => setStarted(true)} />;
 
   return (
-    <main className="mx-auto w-510 px-4 pb-10">
-      {/* header: -mx-4 cancels the main padding so the strip reaches the screen edges */}
-      <header className="grass-strip relative -mx-4 mb-6 border-b-4 border-black px-4 pb-5 pt-7">
-        <h1 className="ml-10 mt-2 font-pixel text-pixel-title font-normal text-white pixel-shadow">
-          Luzon <span className="text-gold">GridSim</span>
-        </h1>
-        <p className="ml-10 *:mt-3 text-large text-white pixel-shadow-sm">
-          Craft the cheapest way to power Luzon for one day. Solved with the simplex method.
-        </p>
+    <main className="pb-10">
+      {/* header: the outer strip is full width so the grass reaches the screen edges,
+          the inner wrapper keeps the title and button aligned with the content below */}
+      <header className="grass-strip mb-6 border-b-4 border-black px-4 pb-5 pt-7">
+        <div className="relative mx-auto w-full max-w-[1320px]">
+          <h1 className="ml-10 mt-2 font-pixel text-pixel-title font-normal text-white pixel-shadow">
+            Luzon <span className="text-gold">GridSim</span>
+          </h1>
+          <p className="ml-10 mt-3 text-large text-white pixel-shadow-sm">
+            Craft the cheapest way to power Luzon for one day. Solved with the simplex method.
+          </p>
 
-        {/* goes back to the landing page */}
-        <button type="button" className="btn absolute right-10 top-7" onClick={() => setStarted(false)}>
-          Main Menu
-        </button>
+          {/* goes back to the landing page */}
+          <button type="button" className="btn absolute right-6 top-0" onClick={() => setStarted(false)}>
+            Main Menu
+          </button>
+        </div>
       </header>
 
-      {loadError && <p className="banner border-red text-red">{loadError}</p>}
+      {/* content wrapper: same max width as the header, centered, with side padding */}
+      <div className="mx-auto w-full max-w-[1320px] px-4">
+        {loadError && <p className="banner border-red text-red">{loadError}</p>}
 
-      {/* the app only shows after the options are loaded */}
-      {options && (
-        // one column on small screens, two columns (320px | rest) from md up
-        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[320px_minmax(0,1fr)]">
-          {/* left side: controls */}
-          <ControlPanel
-            groups={options.groups}
-            selected={selected}
-            onToggleGroup={toggleGroup}
-            onCheckAll={() => setSelected(options.groups)}
-            onReset={() => setSelected([])}
-            co2On={co2On}
-            onCo2On={setCo2On}
-            co2Cap={co2Cap}
-            onCo2Cap={setCo2Cap}
-            onSolve={handleSolve}
-            loading={loading}
-          />
+        {/* the app only shows after the options are loaded */}
+        {options && (
+          // one column on small screens, two columns (320px | rest) from md up
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[320px_minmax(0,1fr)]">
+            {/* left side: controls */}
+            <ControlPanel
+              groups={options.groups}
+              selected={selected}
+              onToggleGroup={toggleGroup}
+              onCheckAll={() => setSelected(options.groups)}
+              onReset={() => setSelected([])}
+              co2On={co2On}
+              onCo2On={setCo2On}
+              co2Cap={co2Cap}
+              onCo2Cap={setCo2Cap}
+              onSolve={handleSolve}
+              loading={loading}
+            />
 
-          {/* right side: tabs and their content */}
-          <section className="panel w-full p-4">
-            {/* tab buttons share the row equally; the active one turns green */}
-            <div className="mb-4 flex gap-1.5">
-              <button
-                className={`btn flex-1 ${tab === "results" ? "btn-grass" : ""}`}
-                onClick={() => setTab("results")}
-              >
-                Results
-              </button>
-              <button
-                className={`btn flex-1 ${tab === "tableau" ? "btn-grass" : ""}`}
-                onClick={() => setTab("tableau")}
-                disabled={!hasTableaus}
-              >
-                Simplex Tableau
-              </button>
-            </div>
+            {/* right side: tabs and their content */}
+            <section className="panel w-full p-4">
+              {/* tab buttons share the row equally; the active one turns green */}
+              <div className="mb-4 flex gap-1.5">
+                <button
+                  className={`btn flex-1 ${tab === "results" ? "btn-grass" : ""}`}
+                  onClick={() => setTab("results")}
+                >
+                  Results
+                </button>
+                <button
+                  className={`btn flex-1 ${tab === "tableau" ? "btn-grass" : ""}`}
+                  onClick={() => setTab("tableau")}
+                  disabled={!hasTableaus}
+                >
+                  Simplex Tableau
+                </button>
+              </div>
 
-            {!result && <p>Pick your plant slots and press Solve.</p>}
-            {result && tab === "results" && <ResultsTab result={result} />}
-            {result && tab === "tableau" && hasTableaus && <TableauTab key={runId} steps={result.tableaus!} />}
-          </section>
-        </div>
-      )}
+              {!result && <p>Pick your plant slots and press Solve.</p>}
+              {result && tab === "results" && <ResultsTab result={result} />}
+              {result && tab === "tableau" && hasTableaus && <TableauTab key={runId} steps={result.tableaus!} />}
+            </section>
+          </div>
+        )}
+      </div>
     </main>
   );
 }

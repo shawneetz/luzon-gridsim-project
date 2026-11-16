@@ -1,12 +1,13 @@
+// ResultsTab.tsx
 // shows what the solver returned:
-//   - a status banner ("advancement made!" when optimal, "you died!" when infeasible)
-//   - stat boxes (cost, iterations, unknowns, constraints)
+//   - a status banner 
+//   - stat boxes 
 //   - the dispatch chart on the left, and on its right the dispatch table
-//     and the price slots (price colored from green (cheap) to red (expensive))
+//     and the price slots 
 //
-// layout (edit the tailwind classes below):
+// layout:
 //   stat boxes: a 5 column grid (md:grid-cols-5). the cost box has col-span-2,
-//               so it is twice as wide. change it to col-span-3 to widen it more.
+//               so it is twice as wide. change it to col-span-3 to widen it more
 //   chart + tables: one column on small screens, two equal columns from xl up (xl:grid-cols-2)
 //   price slots: 3 columns (two rows of three blocks)
 
@@ -16,14 +17,49 @@ import { formatPeso } from "@/lib/format";
 import { blockIcons } from "@/lib/plants";
 import type { SolveResponse } from "@/lib/types";
 
-// turns a price into a color between green (cheapest) and red (most expensive)
+/**
+ * turns a price into a color between green (cheapest) and red (most expensive)
+ *
+ * @param price - the price to color, in ₱ per MWh
+ * @param min - the lowest price among all blocks
+ * @param max - the highest price among all blocks
+ * @returns an `hsl()` string, hue 120 (green) at `min` down to hue 0 (red) at `max`
+ *
+ * @remarks
+ * when every block has the same price (`min === max`) the share is 0,
+ * so everything is green instead of dividing by zero
+ */
 function heatColor(price: number, min: number, max: number): string {
   const share = max === min ? 0 : (price - min) / (max - min); // 0 = cheapest, 1 = priciest
   const hue = 120 - share * 120;                                // 120 = green, 0 = red
   return `hsl(${hue}, 100%, 65%)`;
 }
 
-export default function ResultsTab({ result }: { result: SolveResponse }) {
+/** props for the {@link ResultsTab} component */
+interface ResultsTabProps {
+  /** the full response from `POST /solve`, whatever its status */
+  result: SolveResponse;
+}
+
+/**
+ * shows the outcome of one solve: banner, summary numbers, chart, table and prices
+ *
+ * @remarks
+ * has no state and no hooks, so it could render on the server, but it is
+ * imported by the client page, so it ends up in the client bundle
+ *
+ * edge cases:
+ * - `status` of "invalid" or "error": only the message is shown
+ * - `status` of "infeasible": the banner and the counts are shown, but there
+ *   is no cost, chart, table or prices (the api does not send them)
+ * - `status` of "optimal": everything is shown
+ *
+ * @example
+ * ```tsx
+ * <ResultsTab result={result} />
+ * ```
+ */
+export default function ResultsTab({ result }: ResultsTabProps) {
   const { status, iterations, setup, cost, dispatch, prices } = result;
 
   // bad input or a server error: just show the message, nothing to chart
@@ -62,7 +98,7 @@ export default function ResultsTab({ result }: { result: SolveResponse }) {
 
       {/* only exists when the problem is optimal.
           two columns from xl up: chart on the left, table and prices on the right.
-          min-w-0 lets a column shrink instead of pushing the other one out. */}
+          min-w-0 lets a column shrink instead of pushing the other one out */}
       {dispatch && prices && (
         <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-2">
           {/* left column: chart of mw per plant group per block */}
@@ -101,14 +137,33 @@ export default function ResultsTab({ result }: { result: SolveResponse }) {
   );
 }
 
-// one stat box with a label on top and a big value below.
-// pass className to change its size in the grid, e.g. "col-span-2"
-function Stat({ label, value, className = "" }: { label: string; value: string; className?: string }) {
+/** props for the {@link Stat} box */
+interface StatProps {
+  /** small label shown above the value, e.g. "Number of iterations" */
+  label: string;
+  /** the already formatted value, e.g. "₱1,149,843,800.00" */
+  value: string;
+  /** extra tailwind classes for the grid size, e.g. "col-span-2" (default: none) */
+  className?: string;
+}
+
+/**
+ * one stat box with a label on top and a big value below
+ *
+ * @remarks
+ * `wrap-break-word` lets a very long number wrap instead of overflowing the box
+ * (the old `warp-break-word` was a typo and did nothing)
+ *
+ * @example
+ * ```tsx
+ * <Stat label="Unknowns" value="42" />
+ * ```
+ */
+function Stat({ label, value, className = "" }: StatProps) {
   return (
     <div className={`screen flex min-w-0 flex-col px-3 py-2.5 ${className}`}>
       <span className="text-small text-label">{label}</span>
-      {/* break-words lets a very long number wrap instead of overflowing the box */}
-      <span className="warp-break-word text-stat leading-[1.1] text-gold gold-shadow">{value}</span>
+      <span className="wrap-break-word text-stat leading-[1.1] text-gold gold-shadow">{value}</span>
     </div>
   );
 }
