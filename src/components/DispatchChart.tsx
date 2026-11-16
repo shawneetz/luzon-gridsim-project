@@ -1,19 +1,21 @@
-// DispatchChart.tsx
-// blocky stacked bars: one bar per block (b1 to b6), one colored segment per plant group.
-// the dashed red line is the demand, so you can see supply meeting demand.
-// drawn with plain svg, so no chart library is needed.
-// svg shapes are styled with tailwind too (stroke-*, fill-*, text-*).
 
-import { blockIcons, styleOf } from "@/lib/plants";
+// blocky stacked bars: one bar per block (b1 to b6), one colored segment per plant group
+// the dashed red line is the demand, so you can see supply meeting demand
+// drawn with plain svg, so no chart library is needed
+// svg shapes are styled with tailwind too (stroke-*, fill-*, text-*)
 
-interface Props {
-  groups: string[];   // plant group names (one per row of values)
-  blocks: string[];   // block names, e.g. b1 to b6
-  values: number[][]; // values[g][t] = mw of group g in block t
+import { blockIcons, demand } from "@/lib/grid";
+import { styleOf } from "@/lib/plants";
+
+/** props for the {@link DispatchChart} component */
+interface DispatchChartProps {
+  /** plant group names, one per row of `values` (order decides the stacking order) */
+  groups: string[];
+  /** block names, e.g. ["B1", ..., "B6"], one per column of `values` */
+  blocks: string[];
+  /** `values[g][t]` = output in MW of group `g` in block `t` */
+  values: number[][];
 }
-
-// demand per block from the project spec (table 2), used for the dashed line
-const demand = [6300, 8600, 11800, 12300, 14000, 10600];
 
 // size of the svg and the empty space around the bars
 const W = 760;
@@ -23,7 +25,26 @@ const PAD = { left: 64, right: 16, top: 16, bottom: 44 };
 // spacing between the horizontal grid lines, in mw
 const GRID_STEP = 5000;
 
-export default function DispatchChart({ groups, blocks, values }: Props) {
+/**
+ * stacked bar chart of the dispatch per block, with the demand drawn on top as a dashed line
+ *
+ * @remarks
+ * pure svg with no state, so no "use client" is needed here; it is bundled
+ * with the client page that renders it
+ *
+ * edge cases:
+ * - `values` must have one row per group and one column per block, and
+ *   `blocks.length` should match the length of `demand` in `lib/grid.ts`
+ * - segments with 0 MW (or less) are skipped, so unused groups draw nothing
+ * - the top of the chart is 8% above the highest total or demand, so the
+ *   tallest bar never touches the edge
+ *
+ * @example
+ * ```tsx
+ * <DispatchChart groups={dispatch.groups} blocks={dispatch.blocks} values={dispatch.values} />
+ * ```
+ */
+export default function DispatchChart({ groups, blocks, values }: DispatchChartProps) {
   const n = blocks.length;
 
   // scale: the top of the chart is a little above the highest demand or supply
