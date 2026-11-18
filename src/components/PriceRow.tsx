@@ -4,8 +4,8 @@
 // it holds no state, everything comes in through props
 //
 // layout (edit the tailwind classes below):
-//   3 columns (two rows of three blocks), change grid-cols-3 for another shape
-//   task 4.4 will move this under the chart and line each slot up with its bar
+//   3 columns on small screens (two rows of three), 6 columns from md up (one row)
+//   the one row sits directly under the chart, task 4.4 will line each slot up with its bar
 
 import { blockIcons } from "@/lib/grid";
 
@@ -56,6 +56,8 @@ interface PriceRowProps {
  * - `blockIcons` is indexed by the block position, so it must have one icon per block (see `lib/grid.ts`)
  * - an empty `values` list gives `Math.min()` of nothing, which is `Infinity`, but no slot
  *   is drawn then, so the color is never used
+ * - the price uses 2 decimals and the slots are narrow in the 6 column row, so a price like
+ *   14,700.00 has to fit in about 100px, the dark plate keeps `px-1` small for that reason
  *
  * @example
  * ```tsx
@@ -68,9 +70,9 @@ export default function PriceRow({ blocks, values }: PriceRowProps) {
   const maxPrice = Math.max(...values);
 
   return (
-    <div className="grid grid-cols-3 gap-1.5">
+    <div className="grid grid-cols-3 gap-1.5 md:grid-cols-6">
       {blocks.map((block, t) => (
-        // .slot comes from globals.css, cursor-default because a price slot is not clickable
+        // .slot comes from the shared looks, cursor-default because a price slot is not clickable
         <div key={block} className="slot cursor-default p-2 text-center">
           <div className="font-pixel text-pixel-label text-ink">
             {blockIcons[t]} {block}
@@ -91,5 +93,6 @@ export default function PriceRow({ blocks, values }: PriceRowProps) {
 // mdn, math.min: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min
 // mdn, number.toLocaleString: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString
 // tailwind css v4, grid template columns: https://tailwindcss.com/docs/grid-template-columns
+// tailwind css v4, responsive design (md: breakpoint): https://tailwindcss.com/docs/responsive-design
 // cmsc 150 final project spec, shadow prices and the price of electricity (price = S / h)
 // tsdoc standard: https://tsdoc.org
