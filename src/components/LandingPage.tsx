@@ -2,41 +2,57 @@
 
 // LandingPage.tsx
 // the title screen, like the minecraft home menu. it shows the game logo,
-// a bouncing splash text, and a column of wide buttons.
+// a bouncing splash text, and a column of wide buttons
 // it holds one bit of state (is the info box open); everything else
-// comes in through props.
+// comes in through props
 //
-// styling: everything is tailwind classes written in this file.
+// styling: everything is tailwind classes written in this file
 // the only things that live in globals.css are the shared looks
-// (.btn, .panel) and the splash keyframes (animate-splash).
+// (.btn, .panel) and the splash keyframes (animate-splash)
 //
-// background: ONE container (the first div) with a sky gradient and two
-// children (ground, vignette). to make the background interactive later,
-// replace that container (e.g. with a canvas) and nothing else has to change.
+// background: the scenery now lives in LandingBackground.tsx (sky, sun, hills, ground).
+// the wrapper below only has to be relative and isolate, so the background
+// can sit behind everything with -z-10
 
 import { useState } from "react";
+import LandingBackground from "./LandingBackground";
 
-interface Props {
-  onStart: () => void; // called when the player presses "Start Simulation"
+/** props for the {@link LandingPage} component */
+interface LandingPageProps {
+  /** called when the player presses "Start Simulation" */
+  onStart: () => void;
 }
 
 // thick dark shadow for the big logo letters (used on both words)
 const logoShadow = "[text-shadow:4px_4px_0_#1e1e1e,7px_7px_0_#000000]";
 
-export default function LandingPage({ onStart }: Props) {
+/**
+ * title screen shown before the simulator
+ *
+ * @remarks
+ * this is a client component because it keeps the "how it works" box open
+ * or closed with `useState`
+ *
+ * edge cases:
+ * - the wrapper must keep `relative isolate`, because the background uses
+ *   `-z-10` and would go behind the page body without it
+ * - the splash text uses `animate-splash`, which is switched off for people
+ *   who ask their system for reduced motion (see globals.css)
+ *
+ * @example
+ * ```tsx
+ * <LandingPage onStart={() => setStarted(true)} />
+ * ```
+ */
+export default function LandingPage({ onStart }: LandingPageProps) {
   // is the "how it works" box open
   const [showInfo, setShowInfo] = useState(false);
 
   return (
     // isolate keeps the background (-z-10) inside this wrapper
     <div className="relative isolate flex min-h-screen flex-col items-center justify-center gap-12 px-4">
-      {/* background: sky gradient, with the ground and a dark edge on top of it */}
-      <div className="absolute inset-0 -z-10 bg-linear-to-b from-[#5aa0e8] to-[#bfe0ff]">
-        {/* ground: grass border on top, dirt below, and a darker grass line under the border */}
-        <div className="absolute inset-x-0 bottom-0 h-[28%] border-t-16 border-grass bg-dirt shadow-[inset_0_4px_0_var(--color-grass-dark)]" />
-        {/* vignette: dark edges around the screen */}
-        <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_160px_rgba(0,0,0,0.6)]" />
-      </div>
+      {/* background scenery: sky, sun, hills and ground */}
+      <LandingBackground />
 
       {/* logo: two stacked words, the splash text is pinned to its bottom right */}
       <h1 className="relative text-center font-pixel font-normal leading-tight">
