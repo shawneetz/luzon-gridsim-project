@@ -8,13 +8,14 @@
 // and shows either the results tab or the simplex tableau tab
 //
 // page layout (edit the tailwind classes below):
-//   <main>   full width, so the grass strip can reach both screen edges
-//   <header> the grass title strip (with a "Main Menu" button on the right)
-//            its inner wrapper is capped at 1320px, same as the content below
-//   grid     controls on the left (320px), results on the right (rest of the width)
-//            on small screens it becomes one column
+//   <main>      full width, so the grass strip can reach both screen edges
+//   <AppHeader> the grass title strip with the logo and the button group
+//               (see AppHeader.tsx, it is capped at 1320px like the content below)
+//   grid        controls on the left (320px), results on the right (rest of the width)
+//               on small screens it becomes one column
 
 import { useEffect, useState } from "react";
+import AppHeader from "@/components/AppHeader";
 import ControlPanel from "@/components/ControlPanel";
 import LandingPage from "@/components/LandingPage";
 import ResultsTab from "@/components/ResultsTab";
@@ -116,23 +117,8 @@ export default function Home() {
 
   return (
     <main className="pb-10">
-      {/* header: the outer strip is full width so the grass reaches the screen edges,
-          the inner wrapper keeps the title and button aligned with the content below */}
-      <header className="grass-strip mb-6 border-b-4 border-black px-4 pb-5 pt-7">
-        <div className="relative mx-auto w-full max-w-[1320px]">
-          <h1 className="ml-10 mt-2 font-pixel text-pixel-title font-normal text-white pixel-shadow">
-            Luzon <span className="text-gold">GridSim</span>
-          </h1>
-          <p className="ml-10 mt-3 text-large text-white pixel-shadow-sm">
-            Craft the cheapest way to power Luzon for one day. Solved with the simplex method.
-          </p>
-
-          {/* goes back to the landing page */}
-          <button type="button" className="btn absolute right-6 top-0" onClick={() => setStarted(false)}>
-            Main Menu
-          </button>
-        </div>
-      </header>
+      {/* header: logo, title and the button group, goes back to the landing page on "main menu" */}
+      <AppHeader onMainMenu={() => setStarted(false)} />
 
       {/* content wrapper: same max width as the header, centered, with side padding */}
       <div className="mx-auto w-full max-w-[1320px] px-4">
@@ -186,3 +172,9 @@ export default function Home() {
     </main>
   );
 }
+
+// references:
+// next.js app router, server and client components: https://nextjs.org/docs/app/getting-started/server-and-client-components
+// react, useState and useEffect: https://react.dev/reference/react/useState
+// tailwind css v4, max-width: https://tailwindcss.com/docs/max-width
+// tsdoc standard: https://tsdoc.org
