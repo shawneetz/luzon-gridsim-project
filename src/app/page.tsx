@@ -7,6 +7,11 @@
 // r api, keeps every user choice in state, sends the choices to /solve,
 // and shows either the results tab or the simplex tableau tab
 //
+// states of the right panel:
+//   no result yet     a short "how to read" guide (see EmptyGuide.tsx)
+//   solve failed      an error banner with a retry button (see ErrorBanner.tsx)
+//   result            the results tab or the tableau tab
+//
 // page layout (edit the tailwind classes below):
 //   <main>      full width, so the grass strip can reach both screen edges
 //   <AppHeader> the grass title strip with the logo and the button group
@@ -14,9 +19,11 @@
 //   grid        controls on the left (320px), results on the right (rest of the width)
 //               on small screens it becomes one column
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import ControlPanel from "@/components/ControlPanel";
+import EmptyGuide from "@/components/EmptyGuide";
+import ErrorBanner from "@/components/ErrorBanner";
 import LandingPage from "@/components/LandingPage";
 import ResultsTab from "@/components/ResultsTab";
 import TableauTab from "@/components/TableauTab";
@@ -36,11 +43,14 @@ type Tab = "results" | "tableau";
  *
  * edge cases:
  * - the simulator stays hidden until `/options` answers; if the r api is
- *   down, a red banner is shown instead of the controls
+ *   down, an error banner with a retry button is shown instead of the controls
  * - state is kept when the player goes back to the landing page, so the
  *   previous choices and results are still there on return
  * - `runId` changes on every solve, which remounts the tableau viewer so
  *   it always starts at iteration 0
+ * - a solve that fails to reach the api gives a result with `status: "error"`,
+ *   the page shows it with the error banner (retry runs the same solve again)
+ *   and not through `ResultsTab`, so `ResultsTab` only sees the other statuses
  *
  * @example
  * ```tsx
@@ -55,6 +65,7 @@ export default function Home() {
   // options from the api (plant group names and default co2 cap)
   const [options, setOptions] = useState<Options | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [retryingOptions, setRetryingOptions] = useState(false); // true while the retry button waits for the api
 
   // user choices
   const [selected, setSelected] = useState<string[]>([]); // chosen plant groups
@@ -67,17 +78,46 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>("results");
   const [runId, setRunId] = useState(0); // changes on every solve so the tableau viewer resets
 
-  // on first load, ask the api for the plant groups and the default co2 cap
+  /**
+   * asks the api for the plant groups and the default co2 cap
+   *
+   * @returns a promise that never rejects, a failure is saved in `loadError` instead
+   *
+   * @remarks
+   * it sets state only after the request answers, never before, so calling it
+   * from an effect does not set state during the effect itself
+   * on success it also starts with every group selected and fills the co2 limit
+   */
+  const loadOptions = useCallback(
+    () =>
+      fetchOptions()
+        .then((data) => {
+          setOptions(data);
+          setLoadError("");
+          setSelected(data.groups); // start with every group selected
+          setCo2Cap(String(data.defaultCo2Cap));
+        })
+        // happens when the r script is not running
+        .catch(() => setLoadError("Could not reach the solver API. Is the R API running on port 8000?")),
+    [],
+  );
+
+  // on first load, get the options
   useEffect(() => {
-    fetchOptions()
-      .then((data) => {
-        setOptions(data);
-        setSelected(data.groups); // start with every group selected
-        setCo2Cap(String(data.defaultCo2Cap));
-      })
-      // happens when the r script is not running
-      .catch(() => setLoadError("Could not reach the solver API. Is the R API running on port 8000?"));
-  }, []);
+    loadOptions();
+  }, [loadOptions]);
+
+  /**
+   * tries to load the options again, used by the retry button of the load error banner
+   *
+   * @remarks
+   * `retryingOptions` keeps the button disabled while the request runs
+   * the banner stays visible until the request succeeds, so the page does not flicker
+   */
+  function retryOptions() {
+    setRetryingOptions(true);
+    loadOptions().finally(() => setRetryingOptions(false));
+  }
 
   /**
    * adds the group to the selection, or removes it if it is already selected
@@ -95,6 +135,7 @@ export default function Home() {
    * never throws: a network failure is turned into a result with
    * `status: "error"` so the ui shows a message instead of crashing
    * the loading flag is always reset in `finally`
+   * the error banner's retry button calls this same function
    */
   async function handleSolve() {
     setLoading(true);
@@ -122,7 +163,8 @@ export default function Home() {
 
       {/* content wrapper: same max width as the header, centered, with side padding */}
       <div className="mx-auto w-full max-w-[1320px] px-4">
-        {loadError && <p className="banner border-red text-red">{loadError}</p>}
+        {/* the options request failed: banner with a retry button (the controls stay hidden) */}
+        {loadError && <ErrorBanner message={loadError} onRetry={retryOptions} retrying={retryingOptions} />}
 
         {/* the app only shows after the options are loaded */}
         {options && (
@@ -162,8 +204,21 @@ export default function Home() {
                 </button>
               </div>
 
-              {!result && <p>Pick your plant slots and press Solve.</p>}
-              {result && tab === "results" && <ResultsTab result={result} />}
+              {/* no result yet: show the guide */}
+              {!result && <EmptyGuide />}
+
+              {/* the solve request failed: show the banner with a retry button on the results tab
+                  retry runs the same solve again, and the button says "retrying..." while it waits */}
+              {result?.status === "error" && tab === "results" && (
+                <ErrorBanner
+                  message={result.message ?? "Could not reach the solver API."}
+                  onRetry={handleSolve}
+                  retrying={loading}
+                />
+              )}
+
+              {/* every other result: the results tab or the tableau tab */}
+              {result && result.status !== "error" && tab === "results" && <ResultsTab result={result} />}
               {result && tab === "tableau" && hasTableaus && <TableauTab key={runId} steps={result.tableaus!} />}
             </section>
           </div>
@@ -175,6 +230,10 @@ export default function Home() {
 
 // references:
 // next.js app router, server and client components: https://nextjs.org/docs/app/getting-started/server-and-client-components
-// react, useState and useEffect: https://react.dev/reference/react/useState
+// react, useState: https://react.dev/reference/react/useState
+// react, useEffect: https://react.dev/reference/react/useEffect
+// react, useCallback: https://react.dev/reference/react/useCallback
+// mdn, promise.prototype.finally: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/finally
+// mdn, nullish coalescing (??): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing
 // tailwind css v4, max-width: https://tailwindcss.com/docs/max-width
 // tsdoc standard: https://tsdoc.org

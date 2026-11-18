@@ -6,6 +6,7 @@
 // the heading shows how many groups are selected, like "3 of 7 selected"
 // a bad co2 limit shows a red message under the box, and the solve button is
 // disabled with a hint while nothing can be solved (see lib/validate.ts)
+// while the solver is working the solve button shows a mining animation (see MiningBar.tsx)
 // this component holds no state, the page passes everything in through props
 //
 // layout (edit the tailwind classes below):
@@ -15,6 +16,7 @@
 //   sticky: from md up the panel sticks while the results scroll, see `stickyPanel`
 
 import { useId } from "react";
+import MiningBar from "./MiningBar";
 import Tooltip from "./Tooltip";
 import { styleOf, type PlantStyle } from "@/lib/plants";
 import { co2CapError } from "@/lib/validate";
@@ -107,6 +109,11 @@ function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
  *   bad, and a hint under it says why
  * - the check is only for fast feedback, the r api still checks again, and its
  *   messages still show in the results banner as a fallback
+ *
+ * loading (task 3.5):
+ * - while `loading` is true the button shows {@link MiningBar} instead of "Solve"
+ * - `aria-busy` tells screen readers the button is working, and the label inside
+ *   the bar ("Mining...") is the text they read
  *
  * edge cases:
  * - the selection count uses `groups.length` as the total, so it stays right
@@ -240,15 +247,17 @@ export default function ControlPanel(props: Props) {
         </p>
       )}
 
-      {/* big green solve button: disabled while loading or while an input is bad */}
+      {/* big green solve button: disabled while loading or while an input is bad
+          while loading it shows the mining bar instead of the word "Solve" */}
       <button
         type="button"
         className="btn btn-grass mt-5 w-full py-4 text-base"
         onClick={props.onSolve}
         disabled={props.loading || solveBlocked}
+        aria-busy={props.loading}
         aria-describedby={solveBlocked ? solveHintId : undefined}
       >
-        {props.loading ? "Solving..." : "Solve"}
+        {props.loading ? <MiningBar /> : "Solve"}
       </button>
 
       {/* hint under the button, says why solve is disabled (hidden while solving) */}
@@ -271,6 +280,7 @@ export default function ControlPanel(props: Props) {
 // tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
 // tailwind css v4, border-color: https://tailwindcss.com/docs/border-color
 // tailwind css v4, arbitrary variants: https://tailwindcss.com/docs/hover-focus-and-other-states#using-arbitrary-variants
+// mdn, aria-busy: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-busy
 // mdn, aria-invalid: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-invalid
 // mdn, aria-describedby: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby
 // mdn, alert role: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/alert_role
