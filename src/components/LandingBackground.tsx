@@ -5,10 +5,11 @@
 // layers, from back to front (dom order decides what is in front):
 //   1) sky      vertical gradient, from the sky tokens in globals.css
 //   2) sun      a square sun with a soft glow
-//   3) far hills   stepped silhouette, faded so it looks far away
-//   4) near hills  stepped silhouette, solid dark grass
-//   5) ground   grass row, grass tufts, dirt pattern, stone band
-//   6) vignette dark edges around the screen
+//   3) clouds   blocky clouds drifting left to right, in front of the sun
+//   4) far hills   stepped silhouette, faded so it looks far away
+//   5) near hills  stepped silhouette, solid dark grass
+//   6) ground   grass row, grass tufts, dirt pattern, stone band
+//   7) vignette dark edges around the screen
 //
 // layout (edit the tailwind classes below):
 //   the root fills its parent with absolute inset-0 and sits behind it with -z-10,
@@ -16,8 +17,12 @@
 //   ground height is h-[28%], and the hills use bottom-[27%] so they tuck behind
 //   the grass line. if you change the ground height, change both numbers
 //
+// clouds:
+//   every cloud uses the same block size (1.5vw per grid column), so the pixels match
+//   the drift animation (globals.css) moves a cloud from -30vw to 130vw, so a cloud
+//   must be 30vw wide or less to start fully off screen
+//
 // later tasks build on this file:
-//   2.2 adds clouds between the sun and the far hills
 //   2.3 adds a night mode (moon, stars, darker sky)
 
 /**
@@ -74,6 +79,156 @@ const dirtPattern =
 const grassTufts =
   "[background:repeating-linear-gradient(90deg,var(--color-grass)_0_16px,transparent_16px_48px)]";
 
+/** one horizontal run of filled blocks in a cloud shape, in grid units */
+interface CloudRun {
+  /** column where the run starts */
+  x: number;
+  /** row of the run, 0 is the top row */
+  y: number;
+  /** how many blocks wide the run is */
+  w: number;
+}
+
+/**
+ * turns an ascii cloud shape into runs of filled blocks
+ *
+ * @param shape - one string per row, `X` is a block and `.` is empty
+ * @returns one {@link CloudRun} per group of neighbouring `X` in a row
+ *
+ * @remarks
+ * drawing one rect per run (not one per block) keeps the svg small
+ * all rows of a shape must have the same length, or the cloud looks cut off
+ *
+ * @example
+ * ```ts
+ * cloudRuns(["..XX", "XXXX"]);
+ * // [{ x: 2, y: 0, w: 2 }, { x: 0, y: 1, w: 4 }]
+ * ```
+ */
+function cloudRuns(shape: readonly string[]): CloudRun[] {
+  const runs: CloudRun[] = [];
+  shape.forEach((row, y) => {
+    for (const match of row.matchAll(/X+/g)) {
+      runs.push({ x: match.index ?? 0, y, w: match[0].length });
+    }
+  });
+  return runs;
+}
+
+// cloud shapes: redraw them by editing the strings (X = block, . = empty)
+// the widths below (12, 14, 8 and 16 columns) are used for the w-[..vw] classes in `clouds`
+const cloudSmall = [
+  "..XXXX..",
+  "XXXXXXXX",
+];
+const cloudMedium = [
+  "....XXXX....",
+  "..XXXXXXXX..",
+  "XXXXXXXXXXXX",
+];
+const cloudWide = [
+  "...XXX........",
+  "..XXXXX..XXX..",
+  ".XXXXXXXXXXXXX",
+  "XXXXXXXXXXXXXX",
+];
+const cloudBig = [
+  "....XXXX........",
+  "..XXXXXXXX.XXX..",
+  "XXXXXXXXXXXXXXXX",
+  ".XXXXXXXXXXXXXX.",
+];
+
+/** settings for one cloud in the sky */
+interface CloudConfig {
+  /** the ascii grid of the cloud */
+  shape: readonly string[];
+  /**
+   * position and size classes, written in full so tailwind can find them:
+   * top, a static left (used when motion is reduced), and a width of columns x 1.5vw
+   */
+  className: string;
+  /** how long one trip across the screen takes, in seconds (higher = slower) */
+  seconds: number;
+  /** negative start delay in seconds, so the clouds do not all begin at the same spot */
+  delay: number;
+}
+
+/**
+ * the clouds in the sky: different shapes, heights, speeds and start points
+ *
+ * @remarks
+ * speeds range from 70s to 130s, so the sky never looks like it is in sync
+ * the negative delays make the page load with clouds already spread across the screen
+ */
+const clouds: readonly CloudConfig[] = [
+  { shape: cloudBig,    className: "top-[9%] left-[8%] w-[24vw]",   seconds: 110, delay: -20 },
+  { shape: cloudWide,   className: "top-[20%] left-[55%] w-[21vw]", seconds: 85,  delay: -50 },
+  { shape: cloudSmall,  className: "top-[6%] left-[72%] w-[12vw]",  seconds: 130, delay: -90 },
+  { shape: cloudMedium, className: "top-[28%] left-[30%] w-[18vw]", seconds: 100, delay: -70 },
+  { shape: cloudWide,   className: "top-[15%] left-[88%] w-[21vw]", seconds: 70,  delay: -10 },
+];
+
+/** props for the {@link Cloud} component */
+interface CloudProps {
+  /** the ascii grid of the cloud, see {@link cloudRuns} */
+  shape: readonly string[];
+  /** extra tailwind classes for position and width */
+  className: string;
+  /** seconds for one trip across the screen */
+  seconds: number;
+  /** negative start delay in seconds */
+  delay: number;
+}
+
+/**
+ * one blocky cloud that drifts from the left edge to the right edge
+ *
+ * @remarks
+ * the bottom row is a little darker (a light blue gray), so the cloud has a flat shadow
+ *
+ * edge cases:
+ * - motion allowed: `motion-safe:left-0` replaces the static left position and
+ *   `motion-safe:animate-drift` moves the cloud with the `drift` keyframes
+ * - motion reduced: the cloud stays still at its static `left-[..%]` position,
+ *   so the sky still looks full instead of stacking every cloud at the left edge
+ * - speed and delay use inline `style`, not tailwind classes, because
+ *   `animate-drift` is a shorthand and could override an `animation-duration` class
+ *
+ * @example
+ * ```tsx
+ * <Cloud shape={cloudSmall} className="top-[6%] left-[72%] w-[12vw]" seconds={130} delay={-90} />
+ * ```
+ */
+function Cloud({ shape, className, seconds, delay }: CloudProps) {
+  const runs = cloudRuns(shape);
+  const width = shape[0].length;
+  const lastRow = shape.length - 1;
+
+  return (
+    <div
+      className={`absolute motion-safe:left-0 motion-safe:animate-drift ${className}`}
+      style={{ animationDuration: `${seconds}s`, animationDelay: `${delay}s` }}
+    >
+      <svg
+        viewBox={`0 0 ${width} ${shape.length}`}
+        className="block h-auto w-full opacity-90 [shape-rendering:crispEdges]"
+      >
+        {runs.map((run) => (
+          <rect
+            key={`${run.y}-${run.x}`}
+            x={run.x}
+            y={run.y}
+            width={run.w}
+            height={1}
+            className={run.y === lastRow ? "fill-[#d6e6fa]" : "fill-cloud"}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 /**
  * full screen pixel scenery for the landing page
  *
@@ -85,6 +240,8 @@ const grassTufts =
  * edge cases:
  * - the parent must be `relative` and create a stacking context (`isolate`),
  *   otherwise `-z-10` can push the background behind the page body
+ * - the root has `overflow-hidden`, so clouds drifting past the right edge
+ *   (up to 130vw) never create a horizontal scrollbar
  * - `image-rendering: pixelated` and `crispEdges` keep every edge sharp,
  *   so nothing should be scaled with a blurry filter inside this component
  *
@@ -108,7 +265,13 @@ export default function LandingBackground() {
         <div className="absolute inset-3 bg-[#fff7b0]" />
       </div>
 
-      {/* 3) far hills: faded stone gray, so they blend into the sky */}
+      {/* 3) clouds: after the sun in the dom so they pass in front of it,
+          before the hills so they pass behind them */}
+      {clouds.map((cloud, i) => (
+        <Cloud key={i} {...cloud} />
+      ))}
+
+      {/* 4) far hills: faded stone gray, so they blend into the sky */}
       <svg
         viewBox={`0 0 ${farHeights.length} 100`}
         preserveAspectRatio="none"
@@ -117,7 +280,7 @@ export default function LandingBackground() {
         <polygon points={farPoints} />
       </svg>
 
-      {/* 4) near hills: solid dark grass, in front of the far hills */}
+      {/* 5) near hills: solid dark grass, in front of the far hills */}
       <svg
         viewBox={`0 0 ${nearHeights.length} 100`}
         preserveAspectRatio="none"
@@ -126,7 +289,7 @@ export default function LandingBackground() {
         <polygon points={nearPoints} />
       </svg>
 
-      {/* 5) ground: grass row, dirt with hanging tufts, then a stone band at the bottom */}
+      {/* 6) ground: grass row, dirt with hanging tufts, then a stone band at the bottom */}
       <div className="absolute inset-x-0 bottom-0 flex h-[28%] flex-col">
         <div className="h-4 shrink-0 border-b-4 border-grass-dark bg-grass" />
         <div className={`relative flex-1 ${dirtPattern}`}>
@@ -135,8 +298,8 @@ export default function LandingBackground() {
         <div className="h-10 shrink-0 border-t-4 border-black/40 bg-stone-dark" />
       </div>
 
-      {/* 6) vignette: dark edges around the screen */}
+      {/* 7) vignette: dark edges around the screen */}
       <div className="absolute inset-0 shadow-[inset_0_0_160px_rgba(0,0,0,0.6)]" />
     </div>
   );
-}   
+}
