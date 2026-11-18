@@ -1,4 +1,3 @@
-// ControlPanel.tsx
 // left side of the page: plant group slots, the co2 cap toggle, and the solve button
 // each plant group is an inventory slot you click to select (white frame) or unselect
 // the slot shows the plant's image (from lib/plants.ts) above its name, tag and capacity

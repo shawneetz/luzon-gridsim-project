@@ -1,4 +1,3 @@
-// validate.ts
 // small input checks that run in the browser, so the player gets a message right
 // under the field instead of after a round trip to the r api
 // the rules mirror the project spec (a co2 cap of 0 or less, or blank, is invalid)

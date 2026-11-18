@@ -1,4 +1,3 @@
-// MiningBar.tsx
 // the loading look of the solve button: a row of small dirt blocks that
 // pulse one after another, like blocks being mined, with a "mining..." label
 // it replaces the plain "solving..." text while the r api is working

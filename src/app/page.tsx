@@ -1,6 +1,5 @@
 "use client";
 
-// page.tsx
 // the main page of the app
 // it first shows the landing page (title screen). after the player presses
 // "Start Simulation" it shows the simulator: it loads the options from the

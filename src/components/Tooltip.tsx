@@ -1,6 +1,5 @@
 "use client";
 
-// Tooltip.tsx
 // a css-only item tooltip, like the purple one you see in minecraft when you
 // hover an item in the inventory
 // it wraps one trigger (a button) and shows the tooltip under it on mouse hover

@@ -1,4 +1,3 @@
-// ErrorBanner.tsx
 // a clear red banner for when the solver api cannot be reached
 // it shows a title, the message, and a retry button on the right
 // it is used by the page for both cases: the options request failing on load,

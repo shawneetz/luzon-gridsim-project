@@ -1,39 +1,22 @@
-// ResultsTab.tsx
-// shows what the solver returned:
-//   - a status banner 
-//   - stat boxes 
-//   - the dispatch chart on the left, and on its right the dispatch table
-//     and the price slots 
+// thin layout file for the results of one solve
+// it decides what to show for each status and puts the pieces in order:
+//   - StatusBanner   success or infeasible banner
+//   - StatGrid       cost, iterations, unknowns, constraints
+//   - DispatchChart  stacked bars of mw per plant group per block
+//   - DataTable      output of each plant group
+//   - PriceRow       price of electricity per block
+// the pieces own their own styling, this file only owns the order and the grid
 //
-// layout:
-//   stat boxes: a 5 column grid (md:grid-cols-5). the cost box has col-span-2,
-//               so it is twice as wide. change it to col-span-3 to widen it more
+// layout (edit the tailwind classes below):
 //   chart + tables: one column on small screens, two equal columns from xl up (xl:grid-cols-2)
-//   price slots: 3 columns (two rows of three blocks)
+//   task 4.2 will change this layout, this commit keeps it exactly as it was
 
 import DataTable from "./DataTable";
 import DispatchChart from "./DispatchChart";
-import { formatPeso } from "@/lib/format";
-import { blockIcons } from "@/lib/plants";
+import PriceRow from "./PriceRow";
+import StatGrid from "./StatGrid";
+import StatusBanner from "./StatusBanner";
 import type { SolveResponse } from "@/lib/types";
-
-/**
- * turns a price into a color between green (cheapest) and red (most expensive)
- *
- * @param price - the price to color, in ₱ per MWh
- * @param min - the lowest price among all blocks
- * @param max - the highest price among all blocks
- * @returns an `hsl()` string, hue 120 (green) at `min` down to hue 0 (red) at `max`
- *
- * @remarks
- * when every block has the same price (`min === max`) the share is 0,
- * so everything is green instead of dividing by zero
- */
-function heatColor(price: number, min: number, max: number): string {
-  const share = max === min ? 0 : (price - min) / (max - min); // 0 = cheapest, 1 = priciest
-  const hue = 120 - share * 120;                                // 120 = green, 0 = red
-  return `hsl(${hue}, 100%, 65%)`;
-}
 
 /** props for the {@link ResultsTab} component */
 interface ResultsTabProps {
@@ -44,6 +27,8 @@ interface ResultsTabProps {
 /**
  * shows the outcome of one solve: banner, summary numbers, chart, table and prices
  *
+ * @param props - see {@link ResultsTabProps}
+ *
  * @remarks
  * has no state and no hooks, so it could render on the server, but it is
  * imported by the client page, so it ends up in the client bundle
@@ -53,6 +38,7 @@ interface ResultsTabProps {
  * - `status` of "infeasible": the banner and the counts are shown, but there
  *   is no cost, chart, table or prices (the api does not send them)
  * - `status` of "optimal": everything is shown
+ * - `min-w-0` on the grid columns lets a column shrink instead of pushing the other one out
  *
  * @example
  * ```tsx
@@ -67,38 +53,17 @@ export default function ResultsTab({ result }: ResultsTabProps) {
     return <p className="banner border-red text-red">{result.message}</p>;
   }
 
-  // range of the prices, used to color the price slots
-  const minPrice = prices ? Math.min(...prices.values) : 0;
-  const maxPrice = prices ? Math.max(...prices.values) : 0;
-
   return (
     // flex column with an even gap between every section
     <div className="flex flex-col gap-3.5">
-      {/* success banner or infeasible banner */}
-      {status === "optimal" ? (
-        <div className="banner flex flex-col gap-1 border-slot">
-          <span className="font-pixel text-pixel-button text-gold">Advancement Made!</span>
-          <span>Optimal solution found</span>
-        </div>
-      ) : (
-        <div className="banner animate-shake border-black bg-death py-6 text-center">
-          <span className="mb-2 block font-pixel text-pixel-death [text-shadow:4px_4px_0_#3f0000]">You Died!</span>
-          <span>The problem is infeasible.</span>
-        </div>
-      )}
+      {/* success banner or infeasible banner, status is "optimal" or "infeasible" here */}
+      <StatusBanner status={status} />
 
       {/* summary numbers; cost only exists when the problem is optimal */}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-        {/* col-span-2 makes the cost box twice as wide because its number is long */}
-        {cost !== undefined && <Stat label="Total minimum cost, Z" value={formatPeso(cost)} className="col-span-2" />}
-        <Stat label="Number of iterations" value={String(iterations)} />
-        <Stat label="Unknowns" value={String(setup?.unknowns)} />
-        <Stat label="Constraints" value={String(setup?.constraints)} />
-      </div>
+      <StatGrid cost={cost} iterations={iterations} unknowns={setup?.unknowns} constraints={setup?.constraints} />
 
       {/* only exists when the problem is optimal.
-          two columns from xl up: chart on the left, table and prices on the right.
-          min-w-0 lets a column shrink instead of pushing the other one out */}
+          two columns from xl up: chart on the left, table and prices on the right */}
       {dispatch && prices && (
         <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-2">
           {/* left column: chart of mw per plant group per block */}
@@ -113,23 +78,7 @@ export default function ResultsTab({ result }: ResultsTabProps) {
             <DataTable corner="Plant group" columns={dispatch.blocks} rowLabels={dispatch.groups} rows={dispatch.values} />
 
             <h3 className="subheading">Price of electricity (₱ per MWh)</h3>
-            {/* one price slot per block */}
-            <div className="grid grid-cols-3 gap-1.5">
-              {prices.blocks.map((block, t) => (
-                <div key={block} className="slot cursor-default p-2 text-center">
-                  <div className="font-pixel text-pixel-label text-ink">
-                    {blockIcons[t]} {block}
-                  </div>
-                  {/* the price sits on a dark plate, colored green (cheap) to red (expensive) */}
-                  <div
-                    className="mt-1.5 bg-screen px-1 py-0.5 text-price"
-                    style={{ color: heatColor(prices.values[t], minPrice, maxPrice) }}
-                  >
-                    {prices.values[t].toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <PriceRow blocks={prices.blocks} values={prices.values} />
           </div>
         </div>
       )}
@@ -137,33 +86,11 @@ export default function ResultsTab({ result }: ResultsTabProps) {
   );
 }
 
-/** props for the {@link Stat} box */
-interface StatProps {
-  /** small label shown above the value, e.g. "Number of iterations" */
-  label: string;
-  /** the already formatted value, e.g. "₱1,149,843,800.00" */
-  value: string;
-  /** extra tailwind classes for the grid size, e.g. "col-span-2" (default: none) */
-  className?: string;
-}
-
-/**
- * one stat box with a label on top and a big value below
- *
- * @remarks
- * `wrap-break-word` lets a very long number wrap instead of overflowing the box
- * (the old `warp-break-word` was a typo and did nothing)
- *
- * @example
- * ```tsx
- * <Stat label="Unknowns" value="42" />
- * ```
- */
-function Stat({ label, value, className = "" }: StatProps) {
-  return (
-    <div className={`screen flex min-w-0 flex-col px-3 py-2.5 ${className}`}>
-      <span className="text-small text-label">{label}</span>
-      <span className="wrap-break-word text-stat leading-[1.1] text-gold gold-shadow">{value}</span>
-    </div>
-  );
-}
+// references:
+// react, thinking in react (splitting the ui into components): https://react.dev/learn/thinking-in-react
+// react, conditional rendering: https://react.dev/learn/conditional-rendering
+// typescript, narrowing: https://www.typescriptlang.org/docs/handbook/2/narrowing.html
+// tailwind css v4, grid template columns: https://tailwindcss.com/docs/grid-template-columns
+// tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
+// next.js, server and client components: https://nextjs.org/docs/app/getting-started/server-and-client-components
+// tsdoc standard: https://tsdoc.org

@@ -1,4 +1,3 @@
-// plants.ts
 // one place that holds the color, image, tag, capacity, emission and note of each plant group
 // the slots, the tooltips, the chart, and the legend all read from here, so they stay consistent
 // colors are loosely inspired by minecraft materials (lava, water, gold, ...)

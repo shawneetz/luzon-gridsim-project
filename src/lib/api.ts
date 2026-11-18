@@ -1,5 +1,4 @@
 /*
- * api.ts
  * Helper functions that call the R API. Requests go to /next-app/api,
  * which next.config.ts forwards to the R server (port 8000 by default).
  */

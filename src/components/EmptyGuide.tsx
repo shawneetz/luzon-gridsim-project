@@ -1,4 +1,3 @@
-// EmptyGuide.tsx
 // the short "how to read" guide shown in the right panel before the first solve
 // it replaces the old one line "pick your plant slots and press solve"
 // it has two parts: four steps to run a solve, and a small key that says
