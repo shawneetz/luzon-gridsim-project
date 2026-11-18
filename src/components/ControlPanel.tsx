@@ -4,6 +4,8 @@
 // the slot shows the plant's image (from lib/plants.ts) above its name, tag and capacity
 // hovering or focusing a slot shows an item tooltip with the details (see Tooltip.tsx)
 // the heading shows how many groups are selected, like "3 of 7 selected"
+// a bad co2 limit shows a red message under the box, and the solve button is
+// disabled with a hint while nothing can be solved (see lib/validate.ts)
 // this component holds no state, the page passes everything in through props
 //
 // layout (edit the tailwind classes below):
@@ -12,8 +14,10 @@
 //   image size is the size-10 class on the <img> (40px), change it to resize all icons
 //   sticky: from md up the panel sticks while the results scroll, see `stickyPanel`
 
+import { useId } from "react";
 import Tooltip from "./Tooltip";
 import { styleOf, type PlantStyle } from "@/lib/plants";
+import { co2CapError } from "@/lib/validate";
 
 /** props for the {@link ControlPanel} component */
 interface Props {
@@ -24,7 +28,7 @@ interface Props {
   onReset: () => void;                   // unselect every group
   co2On: boolean;
   onCo2On: (on: boolean) => void;
-  co2Cap: string;                        // text so blank or bad values can be rejected by the api
+  co2Cap: string;                        // text so blank or bad values can be caught before solving
   onCo2Cap: (cap: string) => void;
   onSolve: () => void;
   loading: boolean;                      // true while waiting for the solver
@@ -49,6 +53,10 @@ const stickyPanel = [
   "md:sticky md:top-4 md:max-h-[calc(100vh-2rem)] md:overflow-y-auto",
   `${tallDesktop}:top-36 ${tallDesktop}:max-h-[calc(100vh-10rem)]`,
 ].join(" ");
+
+// inline error under the co2 box (task 3.4)
+// it sits on a black plate, because the red text token is too light to read on the gray panel
+const errorPlate = "mt-1 bg-black px-2 py-1 text-small text-red";
 
 /**
  * the text inside a plant slot tooltip, in the style of an in-game item tooltip
@@ -89,8 +97,16 @@ function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
  * @param props - see {@link Props}
  *
  * @remarks
- * has no state and no hooks, so it needs no "use client" of its own,
- * everything comes in through props from the client page
+ * has no state of its own (only `useId` for the aria links), everything comes in
+ * through props from the client page
+ *
+ * validation (task 3.4):
+ * - the co2 message only shows while the cap is switched on, because the box is
+ *   disabled and ignored by the solver when it is off
+ * - the solve button is disabled when no group is selected or the co2 limit is
+ *   bad, and a hint under it says why
+ * - the check is only for fast feedback, the r api still checks again, and its
+ *   messages still show in the results banner as a fallback
  *
  * edge cases:
  * - the selection count uses `groups.length` as the total, so it stays right
@@ -101,6 +117,8 @@ function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
  *   panel stretches to the full height of the row and has nothing to stick against
  * - the tooltips are inside the panel, which scrolls (`overflow-y-auto`), so each one is
  *   anchored under its slot and to the left or right edge by column, to stay inside the panel
+ * - while `loading` is true the button is also disabled, and the hint stays hidden
+ *   so the two states do not stack
  *
  * @example
  * ```tsx
@@ -108,6 +126,18 @@ function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
  * ```
  */
 export default function ControlPanel(props: Props) {
+  // ids that link the co2 box and the solve button to their messages
+  const co2ErrorId = useId();
+  const solveHintId = useId();
+
+  // validation state, worked out on every render (cheap, so no useMemo needed)
+  const co2Error = props.co2On ? co2CapError(props.co2Cap) : "";
+  const noGroups = props.selected.length === 0;
+
+  // the first problem wins, so the hint shows one message at a time
+  const solveHint = noGroups ? "Select at least one plant" : co2Error ? "Fix the CO₂ limit first" : "";
+  const solveBlocked = solveHint !== "";
+
   return (
     <section className={`panel w-full p-4 ${stickyPanel}`}>
       {/* heading row: title on the left, selection count on the right */}
@@ -193,35 +223,57 @@ export default function ControlPanel(props: Props) {
         <input
           type="text"
           inputMode="numeric"
-          className="field-input"
+          // red frame while the value is bad, it wins over the default gray frame
+          className={`field-input ${co2Error ? "border-red" : ""}`}
           value={props.co2Cap}
           disabled={!props.co2On}
+          aria-invalid={co2Error !== ""}
+          aria-describedby={co2Error ? co2ErrorId : undefined}
           onChange={(e) => props.onCo2Cap(e.target.value)}
         />
       </label>
 
-      {/* big green solve button */}
+      {/* inline co2 error: role="alert" makes screen readers read it as soon as it appears */}
+      {co2Error && (
+        <p id={co2ErrorId} role="alert" className={errorPlate}>
+          {co2Error}
+        </p>
+      )}
+
+      {/* big green solve button: disabled while loading or while an input is bad */}
       <button
         type="button"
         className="btn btn-grass mt-5 w-full py-4 text-base"
         onClick={props.onSolve}
-        disabled={props.loading}
+        disabled={props.loading || solveBlocked}
+        aria-describedby={solveBlocked ? solveHintId : undefined}
       >
         {props.loading ? "Solving..." : "Solve"}
       </button>
+
+      {/* hint under the button, says why solve is disabled (hidden while solving) */}
+      {solveBlocked && !props.loading && (
+        <p id={solveHintId} className="mt-2 text-center text-small text-ink-soft">
+          {solveHint}
+        </p>
+      )}
     </section>
   );
 }
 
 // references:
 // wai-aria authoring practices, tooltip pattern: https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/
+// react, useId: https://react.dev/reference/react/useId
 // react, render props pattern (children as a function): https://react.dev/reference/react/Children
 // react, rendering lists (keys): https://react.dev/learn/rendering-lists
 // tailwind css v4, position (sticky): https://tailwindcss.com/docs/position
 // tailwind css v4, max-height: https://tailwindcss.com/docs/max-height
 // tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
+// tailwind css v4, border-color: https://tailwindcss.com/docs/border-color
 // tailwind css v4, arbitrary variants: https://tailwindcss.com/docs/hover-focus-and-other-states#using-arbitrary-variants
-// mdn, position: sticky: https://developer.mozilla.org/en-US/docs/Web/CSS/position
+// mdn, aria-invalid: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-invalid
+// mdn, aria-describedby: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby
+// mdn, alert role: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/alert_role
 // mdn, aria-live: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-live
 // mdn, number.toLocaleString: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString
 // tsdoc standard: https://tsdoc.org
