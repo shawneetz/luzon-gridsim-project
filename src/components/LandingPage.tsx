@@ -2,9 +2,9 @@
 
 // LandingPage.tsx
 // the title screen, like the minecraft home menu. it shows the game logo,
-// a bouncing splash text, and a column of wide buttons
-// it holds two bits of state (is the info box open, and the player's day or
-// night choice); everything else comes in through props
+// a bouncing splash text, a narrow column of menu buttons, and a footer
+// it holds two bits of state (the player's day or night choice, and which
+// element is the info dialog); everything else comes in through props
 //
 // styling: everything is tailwind classes written in this file
 // the only things that live in globals.css are the shared looks
@@ -17,10 +17,16 @@
 // the wrapper below only has to be relative and isolate, so the background
 // can sit behind everything with -z-10
 //
+// "how it works":
+//   a hover tooltip on the button, and a native <dialog> opened with showModal()
+//   the browser handles the backdrop, the esc key and the focus trap for us
+//
 // layout (edit the tailwind classes below):
-//   the day and night button is pinned to the top right with absolute right-4 top-4
+//   menu buttons: max-w-xs (320px), centered by the items-center of the wrapper
+//   day and night button: pinned to the top right with absolute right-4 top-4
+//   footer: one row from sm up (corner text, disclaimer, corner text), stacked on phones
 
-import { useState, useSyncExternalStore } from "react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
 import LandingBackground from "./LandingBackground";
 
 /** props for the {@link LandingPage} component */
@@ -65,8 +71,8 @@ const getNightOnServer = () => false;
  * title screen shown before the simulator
  *
  * @remarks
- * this is a client component because it keeps state: the "how it works" box
- * and the day or night choice
+ * this is a client component because it keeps state, uses a ref to open the
+ * dialog, and reads the browser clock
  *
  * day or night:
  * - by default it follows the player's local clock (see {@link isNightHour})
@@ -77,9 +83,24 @@ const getNightOnServer = () => false;
  *   player leaves this screen (going to the simulator unmounts this component,
  *   so the choice resets when they come back)
  *
+ * how it works dialog:
+ * - opened with `showModal()` on a ref, closed with the done button, the esc key,
+ *   or a click on the backdrop
+ * - the `<dialog>` is transparent with no padding and the visible panel is an
+ *   inner div, so any click that lands on the dialog element itself is a
+ *   backdrop click
+ * - do not add a display class (`flex`, `grid`, ...) to the `<dialog>`, it would
+ *   override the browser's `display: none` and show the dialog while it is closed
+ * - `m-auto` is needed because tailwind's preflight resets the margin that
+ *   centers a modal dialog
+ *
  * edge cases:
  * - the wrapper must keep `relative isolate`, because the background uses
  *   `-z-10` and would go behind the page body without it
+ * - the tooltip is `opacity-0`, not `hidden`, so screen readers can still read it
+ *   through `aria-describedby`
+ * - the tooltip shows on keyboard focus only (`:focus-visible`), so it does not
+ *   pop up after a mouse click when focus returns to the button
  * - the splash text uses `animate-splash`, which is switched off for people
  *   who ask their system for reduced motion (see globals.css)
  *
@@ -89,8 +110,12 @@ const getNightOnServer = () => false;
  * ```
  */
 export default function LandingPage({ onStart }: LandingPageProps) {
-  // is the "how it works" box open
-  const [showInfo, setShowInfo] = useState(false);
+  // the info dialog, opened and closed through this ref
+  const infoRef = useRef<HTMLDialogElement>(null);
+
+  // ids that connect the button to its tooltip and the dialog to its title
+  const tooltipId = useId();
+  const titleId = useId();
 
   // what the clock says, and what the player picked (null = they have not touched the button)
   const clockSaysNight = useSyncExternalStore(subscribeToNothing, getNightNow, getNightOnServer);
@@ -117,27 +142,79 @@ export default function LandingPage({ onStart }: LandingPageProps) {
         </span>
       </h1>
 
-      {/* menu buttons: .btn comes from globals.css, btn-grass makes it green */}
-      <div className="flex w-full max-w-md flex-col gap-3">
+      {/* menu buttons: narrow and centered like the real title screen
+          .btn comes from globals.css, btn-grass makes it green */}
+      <div className="flex w-full max-w-xs flex-col gap-3">
         <button type="button" className="btn btn-grass w-full py-5 text-pixel-sub" onClick={onStart}>
           Start Simulation
         </button>
-        <button type="button" className="btn w-full py-5 text-pixel-sub" onClick={() => setShowInfo(!showInfo)}>
-          How It Works
-        </button>
 
-        {/* info box, only shown after pressing "How It Works" */}
-        {showInfo && (
-          <div className="panel p-4 text-body">
-            Pick your power plants, press Solve, and the simplex method finds the cheapest way to meet Luzon's
-            demand for one day. The price of electricity in each block comes from the shadow prices.
-          </div>
-        )}
+        {/* group lets the tooltip react to the hover and focus of the button */}
+        <div className="group relative">
+          <button
+            type="button"
+            className="btn w-full py-5 text-pixel-sub"
+            aria-haspopup="dialog"
+            aria-describedby={tooltipId}
+            onClick={() => infoRef.current?.showModal()}
+          >
+            How It Works
+          </button>
+
+          {/* item tooltip: dark purple frame like the in-game one, shown above the button
+              pointer-events-none so it never blocks the click on the button */}
+          <span
+            id={tooltipId}
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-64 -translate-x-1/2 border-2 border-tooltip-border bg-tooltip-bg px-3 py-1.5 text-center text-body text-white opacity-0 outline-2 outline-black transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 motion-reduce:transition-none"
+          >
+            See how the cheapest dispatch is found
+          </span>
+        </div>
       </div>
 
-      {/* bottom corner texts */}
-      <span className="pixel-shadow-sm absolute bottom-3 left-4 text-small text-white">CMSC 150 · UPLB</span>
-      <span className="pixel-shadow-sm absolute bottom-3 right-4 text-small text-white">Simplex Method v1.0</span>
+      {/* info dialog: native modal, see the remarks above for why it is built this way */}
+      <dialog
+        ref={infoRef}
+        aria-labelledby={titleId}
+        className="m-auto w-[min(32rem,calc(100%-2rem))] bg-transparent p-0 text-ink backdrop:bg-black/60"
+        // a click on the dialog element itself (not on the panel inside) is a backdrop click
+        onClick={(e) => {
+          if (e.target === e.currentTarget) infoRef.current?.close();
+        }}
+      >
+        <div className="panel p-5">
+          <h2 id={titleId} className="heading">
+            How it works
+          </h2>
+          <p className="mb-3 text-body">
+            The simplex method finds the cheapest way to run the Luzon grid for one day while meeting demand in
+            every block.
+          </p>
+          <ol className="list-decimal space-y-1 pl-6 text-body">
+            <li>Pick your plant groups, and switch on the CO₂ cap if you want one.</li>
+            <li>Press Solve.</li>
+            <li>Read the output of each plant and the price of electricity in each block.</li>
+            <li>Open the Simplex Tableau tab to step through every iteration.</li>
+          </ol>
+          <p className="mt-3 text-body">The price in each block comes from the shadow prices of the final tableau.</p>
+
+          <button
+            type="button"
+            className="btn btn-grass mt-4 w-full py-4"
+            onClick={() => infoRef.current?.close()}
+          >
+            Done
+          </button>
+        </div>
+      </dialog>
+
+      {/* footer: one row from sm up, stacked and centered on phones */}
+      <div className="absolute inset-x-4 bottom-3 flex flex-col items-center gap-0.5 text-center text-small text-white sm:flex-row sm:justify-between sm:gap-4">
+        <span className="pixel-shadow-sm">CMSC 150 · UPLB</span>
+        <span className="pixel-shadow-sm text-white/80">Not affiliated with Mojang or Microsoft</span>
+        <span className="pixel-shadow-sm">Simplex Method v1.0</span>
+      </div>
     </div>
   );
 }
