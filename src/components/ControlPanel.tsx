@@ -2,15 +2,18 @@
 // left side of the page: plant group slots, the co2 cap toggle, and the solve button
 // each plant group is an inventory slot you click to select (white frame) or unselect
 // the slot shows the plant's image (from lib/plants.ts) above its name, tag and capacity
+// hovering or focusing a slot shows an item tooltip with the details (see Tooltip.tsx)
 // the heading shows how many groups are selected, like "3 of 7 selected"
 // this component holds no state, the page passes everything in through props
 //
 // layout (edit the tailwind classes below):
 //   plant slots are a 2 column grid, change grid-cols-2 for more or fewer columns
+//   if you change the column count, also change how `align` is picked for the tooltip
 //   image size is the size-10 class on the <img> (40px), change it to resize all icons
 //   sticky: from md up the panel sticks while the results scroll, see `stickyPanel`
 
-import { styleOf } from "@/lib/plants";
+import Tooltip from "./Tooltip";
+import { styleOf, type PlantStyle } from "@/lib/plants";
 
 /** props for the {@link ControlPanel} component */
 interface Props {
@@ -28,7 +31,8 @@ interface Props {
 }
 
 // look of a plant slot. "slot" (from globals.css) gives the gray bevel
-const slotBase = "slot flex flex-col items-start gap-0.5 p-2 text-left text-ink";
+// h-full w-full makes the button fill the tooltip wrapper, which fills the grid cell
+const slotBase = "slot flex h-full w-full flex-col items-start gap-0.5 p-2 text-left text-ink";
 const slotOff = "hover:bg-slot-hover";                                         // not selected
 const slotOn = "border-4 border-white bg-slot-selected pb-3.5 outline-2 outline-black"; // selected
 
@@ -38,13 +42,46 @@ const slotOn = "border-4 border-white bg-slot-selected pb-3.5 outline-2 outline-
 //   so on those windows the panel needs a bigger top offset to stay under the header
 // - max-h plus overflow-y-auto keeps the solve button reachable when the panel is taller than the
 //   window, the panel scrolls inside itself instead of being cut off
-// - the media query is written once as a constant so the three classes always use the same rule
+// - the media query is written once as a constant so the classes always use the same rule
 //   (underscores become spaces in tailwind arbitrary values)
 const tallDesktop = "[@media(min-width:768px)_and_(min-height:800px)]";
 const stickyPanel = [
   "md:sticky md:top-4 md:max-h-[calc(100vh-2rem)] md:overflow-y-auto",
   `${tallDesktop}:top-36 ${tallDesktop}:max-h-[calc(100vh-10rem)]`,
 ].join(" ");
+
+/**
+ * the text inside a plant slot tooltip, in the style of an in-game item tooltip
+ *
+ * @param props.group - plant group name, shown as the white title
+ * @param props.style - the style of that group, see {@link PlantStyle}
+ *
+ * @remarks
+ * a group the style file does not know has `capMw` of 0, so only its name is shown
+ * the emission line also shows for 0, because "0 t CO₂/MWh" is a real fact for hydro,
+ * solar and wind
+ *
+ * @example
+ * ```tsx
+ * <PlantTooltip group="Hydro" style={styleOf("Hydro")} />
+ * ```
+ */
+function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
+  const known = style.capMw > 0;
+  return (
+    <>
+      <span className="block text-body text-white">{group}</span>
+      {known && (
+        <>
+          <span className="block text-label">Capacity: {style.capMw.toLocaleString("en-US")} MW</span>
+          <span className="block text-label">Emission: {style.emission} t CO₂/MWh</span>
+        </>
+      )}
+      {/* light purple like the lore text in game */}
+      {style.note && <span className="mt-1 block text-[#ff55ff]">{style.note}</span>}
+    </>
+  );
+}
 
 /**
  * left panel of the simulator: plant slots, co2 cap and solve button
@@ -62,6 +99,8 @@ const stickyPanel = [
  *   instead of showing "0 MW"
  * - `sticky` needs the grid parent to use `items-start` (page.tsx does), otherwise the
  *   panel stretches to the full height of the row and has nothing to stick against
+ * - the tooltips are inside the panel, which scrolls (`overflow-y-auto`), so each one is
+ *   anchored under its slot and to the left or right edge by column, to stay inside the panel
  *
  * @example
  * ```tsx
@@ -92,38 +131,48 @@ export default function ControlPanel(props: Props) {
 
       {/* one slot per plant group; clicking a slot selects or unselects it */}
       <div className="mt-3 grid grid-cols-2 gap-2">
-        {props.groups.map((group) => {
+        {props.groups.map((group, i) => {
           const style = styleOf(group);
           const isOn = props.selected.includes(group);
           return (
-            <button
+            // even index = left column, odd index = right column (2 column grid)
+            <Tooltip
               key={group}
-              type="button"
-              className={`${slotBase} ${isOn ? slotOn : slotOff}`}
-              // selected slots get a color bar of the plant type at the bottom
-              style={isOn ? { boxShadow: `inset 0 -8px 0 ${style.color}` } : undefined}
-              aria-pressed={isOn}
-              onClick={() => props.onToggleGroup(group)}
+              className="h-full"
+              align={i % 2 === 0 ? "left" : "right"}
+              content={<PlantTooltip group={group} style={style} />}
             >
-              {/* fixed 40px box: object-contain fits any image size without stretching,
-                  pixelated keeps pixel art sharp. plain <img> keeps this simple,
-                  so the next/image lint rule is switched off for this line */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={style.image}
-                alt=""
-                className="size-10 object-contain [image-rendering:pixelated]"
-              />
-              <span className="font-body text-input leading-none">{group}</span>
-              <span className="font-pixel text-pixel-tiny text-ink-soft">{style.tag}</span>
+              {(describedBy) => (
+                <button
+                  type="button"
+                  className={`${slotBase} ${isOn ? slotOn : slotOff}`}
+                  // selected slots get a color bar of the plant type at the bottom
+                  style={isOn ? { boxShadow: `inset 0 -8px 0 ${style.color}` } : undefined}
+                  aria-pressed={isOn}
+                  aria-describedby={describedBy}
+                  onClick={() => props.onToggleGroup(group)}
+                >
+                  {/* fixed 40px box: object-contain fits any image size without stretching,
+                      pixelated keeps pixel art sharp. plain <img> keeps this simple,
+                      so the next/image lint rule is switched off for this line */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={style.image}
+                    alt=""
+                    className="size-10 object-contain [image-rendering:pixelated]"
+                  />
+                  <span className="font-body text-input leading-none">{group}</span>
+                  <span className="font-pixel text-pixel-tiny text-ink-soft">{style.tag}</span>
 
-              {/* capacity hint, only for groups that have a known capacity */}
-              {style.capMw > 0 && (
-                <span className="font-body text-small leading-none text-ink-soft">
-                  {style.capMw.toLocaleString("en-US")} MW
-                </span>
+                  {/* capacity hint, only for groups that have a known capacity */}
+                  {style.capMw > 0 && (
+                    <span className="font-body text-small leading-none text-ink-soft">
+                      {style.capMw.toLocaleString("en-US")} MW
+                    </span>
+                  )}
+                </button>
               )}
-            </button>
+            </Tooltip>
           );
         })}
       </div>
@@ -165,6 +214,9 @@ export default function ControlPanel(props: Props) {
 }
 
 // references:
+// wai-aria authoring practices, tooltip pattern: https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/
+// react, render props pattern (children as a function): https://react.dev/reference/react/Children
+// react, rendering lists (keys): https://react.dev/learn/rendering-lists
 // tailwind css v4, position (sticky): https://tailwindcss.com/docs/position
 // tailwind css v4, max-height: https://tailwindcss.com/docs/max-height
 // tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
@@ -172,5 +224,4 @@ export default function ControlPanel(props: Props) {
 // mdn, position: sticky: https://developer.mozilla.org/en-US/docs/Web/CSS/position
 // mdn, aria-live: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-live
 // mdn, number.toLocaleString: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString
-// react, passing props: https://react.dev/learn/passing-props-to-a-component
 // tsdoc standard: https://tsdoc.org
