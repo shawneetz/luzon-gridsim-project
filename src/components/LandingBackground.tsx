@@ -3,13 +3,20 @@
 // (no image files), so it stays sharp at any screen size
 //
 // layers, from back to front (dom order decides what is in front):
-//   1) sky      vertical gradient, from the sky tokens in globals.css
-//   2) sun      a square sun with a soft glow
-//   3) clouds   blocky clouds drifting left to right, in front of the sun
-//   4) far hills   stepped silhouette, faded so it looks far away
-//   5) near hills  stepped silhouette, solid dark grass
-//   6) ground   grass row, grass tufts, dirt pattern, stone band
-//   7) vignette dark edges around the screen
+//   1) sky         day gradient, with a night gradient fading in on top of it
+//   2) stars       small twinkling squares, only visible at night
+//   3) sun         a square sun with a soft glow, sets at night
+//   4) moon        a pale square with craters, rises at night
+//   5) clouds      blocky clouds drifting left to right, dimmed at night
+//   6) dimmed group (darkened with a filter at night)
+//        far hills   stepped silhouette, faded so it looks far away
+//        near hills  stepped silhouette, solid dark grass
+//        ground      grass row, grass tufts, dirt pattern, stone band
+//   7) vignette    dark edges around the screen
+//
+// day and night:
+//   the `night` prop decides the mode, the parent owns the state (see LandingPage.tsx)
+//   every change fades over 1 second with css transitions, so nothing snaps
 //
 // layout (edit the tailwind classes below):
 //   the root fills its parent with absolute inset-0 and sits behind it with -z-10,
@@ -21,9 +28,6 @@
 //   every cloud uses the same block size (1.5vw per grid column), so the pixels match
 //   the drift animation (globals.css) moves a cloud from -30vw to 130vw, so a cloud
 //   must be 30vw wide or less to start fully off screen
-//
-// later tasks build on this file:
-//   2.3 adds a night mode (moon, stars, darker sky)
 
 /**
  * turns a list of column heights into the `points` of a stepped svg polygon
@@ -79,6 +83,57 @@ const dirtPattern =
 const grassTufts =
   "[background:repeating-linear-gradient(90deg,var(--color-grass)_0_16px,transparent_16px_48px)]";
 
+// shared fade for everything that changes between day and night
+// motion-reduce:transition-none makes the switch instant for people who ask for less motion
+// (the reduced motion rule in globals.css only covers animate-* classes, not transitions)
+const fade = "transition-all duration-1000 motion-reduce:transition-none";
+
+/** one star in the night sky, positions are percentages inside the star layer */
+interface Star {
+  /** distance from the left edge, 0 to 100 */
+  left: number;
+  /** distance from the top of the star layer, 0 to 100 */
+  top: number;
+  /** true for the few bigger stars */
+  big: boolean;
+  /** twinkle start delay in seconds, so the stars do not blink together */
+  delay: number;
+}
+
+/**
+ * makes a fixed list of stars from a seeded random number generator
+ *
+ * @param count - how many stars to make
+ * @returns the same stars every time it is called
+ *
+ * @remarks
+ * `Math.random()` is not used on purpose: the server and the browser would
+ * draw different stars and react would report a hydration mismatch
+ * the generator is a small lehmer (park-miller) one, so the layout is stable
+ * change `seed` to get a different sky
+ *
+ * @example
+ * ```ts
+ * makeStars(3).length; // 3
+ * ```
+ */
+function makeStars(count: number): Star[] {
+  let seed = 7;
+  const next = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  return Array.from({ length: count }, () => ({
+    left: next() * 100,
+    top: next() * 100,
+    big: next() > 0.8,
+    delay: next() * 2,
+  }));
+}
+
+// computed once when the file loads, not on every render
+const stars = makeStars(42);
+
 /** one horizontal run of filled blocks in a cloud shape, in grid units */
 interface CloudRun {
   /** column where the run starts */
@@ -116,7 +171,7 @@ function cloudRuns(shape: readonly string[]): CloudRun[] {
 }
 
 // cloud shapes: redraw them by editing the strings (X = block, . = empty)
-// the widths below (12, 14, 8 and 16 columns) are used for the w-[..vw] classes in `clouds`
+// the widths below (8, 12, 14 and 16 columns) are used for the w-[..vw] classes in `clouds`
 const cloudSmall = [
   "..XXXX..",
   "XXXXXXXX",
@@ -229,73 +284,138 @@ function Cloud({ shape, className, seconds, delay }: CloudProps) {
   );
 }
 
+/** props for the {@link LandingBackground} component */
+interface LandingBackgroundProps {
+  /**
+   * true shows the night scene (dark sky, stars, moon, dim ground),
+   * false shows the day scene (default: false)
+   */
+  night?: boolean;
+}
+
 /**
- * full screen pixel scenery for the landing page
+ * full screen pixel scenery for the landing page, in day or night mode
  *
  * @remarks
- * has no props and no state, so it needs no "use client" of its own. it is
- * decorative only, so it is hidden from screen readers with `aria-hidden`
- * and ignores the mouse with `pointer-events-none`
+ * has no state and no hooks, so it needs no "use client" of its own: the mode
+ * comes in through the `night` prop and the parent decides when it changes
+ * it is decorative only, so it is hidden from screen readers with `aria-hidden`
+ * and ignores the mouse with `pointer-events-none`. this is also why the
+ * toggle button lives in the parent and not here
  *
  * edge cases:
  * - the parent must be `relative` and create a stacking context (`isolate`),
  *   otherwise `-z-10` can push the background behind the page body
  * - the root has `overflow-hidden`, so clouds drifting past the right edge
  *   (up to 130vw) never create a horizontal scrollbar
+ * - the sky cannot animate between two gradients, so the night gradient is a
+ *   second layer that fades in with `opacity`
+ * - the dimmed group uses a css `filter`, so it only holds static shapes; the
+ *   clouds are outside of it because a filter on moving children would be
+ *   recalculated every frame
  * - `image-rendering: pixelated` and `crispEdges` keep every edge sharp,
  *   so nothing should be scaled with a blurry filter inside this component
  *
  * @example
  * ```tsx
  * <div className="relative isolate min-h-screen">
- *   <LandingBackground />
+ *   <LandingBackground night={isNight} />
  *   ...page content...
  * </div>
  * ```
  */
-export default function LandingBackground() {
+export default function LandingBackground({ night = false }: LandingBackgroundProps) {
   return (
-    // 1) sky: gradient from the day sky tokens
+    // 1) sky: the day gradient is the base, the night gradient fades in over it
     <div
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-linear-to-b from-sky-top to-sky-bottom [image-rendering:pixelated]"
     >
-      {/* 2) sun: a pale square inside a gold square, with a soft glow around it */}
-      <div className="absolute right-[12%] top-[10%] size-24 bg-gold shadow-[0_0_80px_20px_rgba(255,216,61,0.45)]">
+      <div
+        className={`absolute inset-0 bg-linear-to-b from-sky-night-top to-sky-night-bottom ${fade} ${
+          night ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      {/* 2) stars: only in the upper part of the sky, the whole layer fades with the mode
+          each star twinkles on its own with animate-twinkle and a different delay */}
+      <div className={`absolute inset-x-0 top-0 h-[60%] ${fade} ${night ? "opacity-100" : "opacity-0"}`}>
+        {stars.map((star, i) => (
+          <span
+            key={i}
+            className={`absolute animate-twinkle bg-white ${star.big ? "size-1.5" : "size-1"}`}
+            style={{
+              left: `${star.left.toFixed(2)}%`,
+              top: `${star.top.toFixed(2)}%`,
+              animationDelay: `${star.delay.toFixed(2)}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* 3) sun: a pale square inside a gold square, with a soft glow around it
+          at night it slides down and fades out, like it is setting */}
+      <div
+        className={`absolute right-[12%] top-[10%] size-24 bg-gold shadow-[0_0_80px_20px_rgba(255,216,61,0.45)] ${fade} ${
+          night ? "translate-y-48 opacity-0" : "translate-y-0 opacity-100"
+        }`}
+      >
         <div className="absolute inset-3 bg-[#fff7b0]" />
       </div>
 
-      {/* 3) clouds: after the sun in the dom so they pass in front of it,
-          before the hills so they pass behind them */}
-      {clouds.map((cloud, i) => (
-        <Cloud key={i} {...cloud} />
-      ))}
-
-      {/* 4) far hills: faded stone gray, so they blend into the sky */}
-      <svg
-        viewBox={`0 0 ${farHeights.length} 100`}
-        preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-[27%] h-[34%] w-full fill-stone-dark opacity-50 [shape-rendering:crispEdges]"
+      {/* 4) moon: a pale square with three dark craters
+          at day it waits below and is invisible, at night it rises into place */}
+      <div
+        className={`absolute left-[14%] top-[12%] size-20 bg-[#e8eefc] shadow-[0_0_60px_15px_rgba(200,215,255,0.3)] ${fade} ${
+          night ? "translate-y-0 opacity-100" : "translate-y-48 opacity-0"
+        }`}
       >
-        <polygon points={farPoints} />
-      </svg>
+        <div className="absolute left-3 top-4 size-4 bg-[#c3cde6]" />
+        <div className="absolute bottom-3 right-4 size-5 bg-[#c3cde6]" />
+        <div className="absolute bottom-6 left-8 size-3 bg-[#c3cde6]" />
+      </div>
 
-      {/* 5) near hills: solid dark grass, in front of the far hills */}
-      <svg
-        viewBox={`0 0 ${nearHeights.length} 100`}
-        preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-[27%] h-[22%] w-full fill-grass-dark [shape-rendering:crispEdges]"
+      {/* 5) clouds: after the sun in the dom so they pass in front of it,
+          before the hills so they pass behind them
+          the wrapper fades them to a dim shade at night */}
+      <div className={`absolute inset-0 ${fade} ${night ? "opacity-35" : "opacity-100"}`}>
+        {clouds.map((cloud, i) => (
+          <Cloud key={i} {...cloud} />
+        ))}
+      </div>
+
+      {/* 6) dimmed group: hills and ground share one filter, so they all darken together */}
+      <div
+        className={`absolute inset-0 transition-[filter] duration-1000 motion-reduce:transition-none ${
+          night ? "brightness-50" : "brightness-100"
+        }`}
       >
-        <polygon points={nearPoints} />
-      </svg>
+        {/* far hills: faded stone gray, so they blend into the sky */}
+        <svg
+          viewBox={`0 0 ${farHeights.length} 100`}
+          preserveAspectRatio="none"
+          className="absolute inset-x-0 bottom-[27%] h-[34%] w-full fill-stone-dark opacity-50 [shape-rendering:crispEdges]"
+        >
+          <polygon points={farPoints} />
+        </svg>
 
-      {/* 6) ground: grass row, dirt with hanging tufts, then a stone band at the bottom */}
-      <div className="absolute inset-x-0 bottom-0 flex h-[28%] flex-col">
-        <div className="h-4 shrink-0 border-b-4 border-grass-dark bg-grass" />
-        <div className={`relative flex-1 ${dirtPattern}`}>
-          <div className={`absolute inset-x-0 top-0 h-2 ${grassTufts}`} />
+        {/* near hills: solid dark grass, in front of the far hills */}
+        <svg
+          viewBox={`0 0 ${nearHeights.length} 100`}
+          preserveAspectRatio="none"
+          className="absolute inset-x-0 bottom-[27%] h-[22%] w-full fill-grass-dark [shape-rendering:crispEdges]"
+        >
+          <polygon points={nearPoints} />
+        </svg>
+
+        {/* ground: grass row, dirt with hanging tufts, then a stone band at the bottom */}
+        <div className="absolute inset-x-0 bottom-0 flex h-[28%] flex-col">
+          <div className="h-4 shrink-0 border-b-4 border-grass-dark bg-grass" />
+          <div className={`relative flex-1 ${dirtPattern}`}>
+            <div className={`absolute inset-x-0 top-0 h-2 ${grassTufts}`} />
+          </div>
+          <div className="h-10 shrink-0 border-t-4 border-black/40 bg-stone-dark" />
         </div>
-        <div className="h-10 shrink-0 border-t-4 border-black/40 bg-stone-dark" />
       </div>
 
       {/* 7) vignette: dark edges around the screen */}
