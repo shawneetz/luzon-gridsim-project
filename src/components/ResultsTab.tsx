@@ -3,7 +3,8 @@
 // so the results read top to bottom as summary, then picture, then numbers
 //   1) summary   StatusBanner and StatGrid side by side in one row
 //   2) dispatch  DispatchChart at full width, with PriceRow directly under it
-//   3) numbers   DataTable (output of each plant group) beside KeyInsights
+//   3) numbers   DataTable (output of each plant group, with totals and demand)
+//                beside KeyInsights
 // the pieces own their own styling, this file only owns the order and the panels
 //
 // layout (edit the tailwind classes below):
@@ -14,12 +15,14 @@
 //   every section is a .panel with a .heading, see the shared looks in the global stylesheet
 
 import type { ReactNode } from "react";
-import DataTable from "./DataTable";
+import DataTable, { type FooterRow } from "./DataTable";
 import DispatchChart from "./DispatchChart";
 import KeyInsights from "./KeyInsights";
 import PriceRow from "./PriceRow";
 import StatGrid from "./StatGrid";
 import StatusBanner from "./StatusBanner";
+import { blockTotals, fullCapacityFlags } from "@/lib/dispatchTable";
+import { demand } from "@/lib/grid";
 import type { SolveResponse } from "@/lib/types";
 
 /** props for the {@link Section} component */
@@ -70,11 +73,22 @@ interface ResultsTabProps {
  * has no state and no hooks, so it could render on the server, but it is
  * imported by the client page, so it ends up in the client bundle
  *
+ * dispatch table (task 4.6):
+ * - the footer has a total supply row (sum of the groups per block) and a demand row,
+ *   so supply against demand can be checked at a glance
+ * - cells at the full capacity of their plant group turn gold, the key under the table
+ *   says so, so the meaning does not depend on the color alone (each gold cell also
+ *   has a hover title)
+ * - the demand row reads the fixed demand list from the grid constants, not from
+ *   the solver, like the dashed line in the chart
+ *
  * edge cases:
  * - `status` of "invalid" or "error": only the message is shown
  * - `status` of "infeasible": only the summary panel is shown (banner and counts),
  *   the api sends no cost, chart, table or prices
  * - `status` of "optimal": every panel is shown
+ * - the demand row is cut to the number of blocks the api sent, so a short response
+ *   never prints extra columns
  * - `min-w-0` lets the stat boxes shrink inside the row instead of pushing the page wider
  * - the banner wrapper uses `*:flex-1` so the banner grows to the same height as the stat boxes
  * - `items-start` on the numbers row keeps the shorter card from stretching to the height of the taller one
@@ -93,6 +107,15 @@ export default function ResultsTab({ result }: ResultsTabProps) {
   if (status === "invalid" || status === "error") {
     return <p className="banner border-red text-red">{result.message}</p>;
   }
+
+  // extra table pieces, only worked out when there is a dispatch to show
+  const fullCapacity = dispatch ? fullCapacityFlags(dispatch.groups, dispatch.values) : undefined;
+  const footerRows: FooterRow[] = dispatch
+    ? [
+        { label: "Total supply", values: blockTotals(dispatch.values), tone: "total" },
+        { label: "Demand", values: demand.slice(0, dispatch.blocks.length), tone: "demand" },
+      ]
+    : [];
 
   return (
     // flex column with an even gap between the sections
@@ -124,7 +147,19 @@ export default function ResultsTab({ result }: ResultsTabProps) {
           {/* section 3: two cards side by side from xl up, the table and the key insights */}
           <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <Section title="Output of each plant group (MW)">
-              <DataTable corner="Plant group" columns={dispatch.blocks} rowLabels={dispatch.groups} rows={dispatch.values} />
+              <DataTable
+                corner="Plant group"
+                columns={dispatch.blocks}
+                rowLabels={dispatch.groups}
+                rows={dispatch.values}
+                highlight={fullCapacity}
+                footerRows={footerRows}
+              />
+              {/* key for the gold cells, a small gold swatch like the ones in the chart legend */}
+              <p className="flex items-center gap-2 text-small text-ink-soft">
+                <span aria-hidden="true" className="inline-block size-3 border-2 border-black bg-gold" />
+                Gold cell = plant group at full capacity
+              </p>
             </Section>
             <Section title="Key insights">
               <KeyInsights dispatch={dispatch} prices={prices} />
@@ -142,9 +177,12 @@ export default function ResultsTab({ result }: ResultsTabProps) {
 // react, fragments: https://react.dev/reference/react/Fragment
 // react, children prop and ReactNode: https://react.dev/learn/passing-props-to-a-component#passing-jsx-as-children
 // typescript, narrowing: https://www.typescriptlang.org/docs/handbook/2/narrowing.html
+// typescript, importing types inline (import { type X }): https://www.typescriptlang.org/docs/handbook/modules/reference.html#type-modifiers-on-import-names
+// mdn, array.prototype.slice: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice
 // tailwind css v4, grid template columns: https://tailwindcss.com/docs/grid-template-columns
 // tailwind css v4, align items: https://tailwindcss.com/docs/align-items
 // tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
 // tailwind css v4, styling direct children (*: variant): https://tailwindcss.com/docs/hover-focus-and-other-states#styling-direct-children
 // mdn, aria-label: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-label
+// cmsc 150 final project spec, table 1 (plant capacities) and table 2 (demand)
 // tsdoc standard: https://tsdoc.org
