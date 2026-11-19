@@ -1,9 +1,12 @@
-
 // blocky stacked bars: one bar per block (b1 to b6), one colored segment per plant group
 // the dashed red line is the demand, so you can see supply meeting demand
 // drawn with plain svg, so no chart library is needed
 // svg shapes are styled with tailwind too (stroke-*, fill-*, text-*)
+//
+// the size and the gaps of the svg come from lib/chartLayout.ts, the price row
+// under the chart reads the same numbers, so each price sits under its bar
 
+import { CHART_H as H, CHART_PAD as PAD, CHART_W as W } from "@/lib/chartLayout";
 import { blockIcons, demand } from "@/lib/grid";
 import { styleOf } from "@/lib/plants";
 
@@ -17,16 +20,13 @@ interface DispatchChartProps {
   values: number[][];
 }
 
-// size of the svg and the empty space around the bars
-const W = 760;
-const H = 340;
-const PAD = { left: 64, right: 16, top: 16, bottom: 44 };
-
 // spacing between the horizontal grid lines, in mw
 const GRID_STEP = 5000;
 
 /**
  * stacked bar chart of the dispatch per block, with the demand drawn on top as a dashed line
+ *
+ * @param props - see {@link DispatchChartProps}
  *
  * @remarks
  * pure svg with no state, so no "use client" is needed here; it is bundled
@@ -38,6 +38,8 @@ const GRID_STEP = 5000;
  * - segments with 0 MW (or less) are skipped, so unused groups draw nothing
  * - the top of the chart is 8% above the highest total or demand, so the
  *   tallest bar never touches the edge
+ * - the size and the padding are shared with the price row, if you change them in
+ *   `lib/chartLayout.ts` both follow, do not hardcode them again here
  *
  * @example
  * ```tsx
@@ -140,3 +142,14 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
     </div>
   );
 }
+
+// references:
+// mdn, svg viewBox: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/viewBox
+// mdn, svg shape-rendering (crispEdges): https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/shape-rendering
+// mdn, svg polyline: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/polyline
+// mdn, svg text-anchor: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/text-anchor
+// mdn, array.prototype.reduce: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce
+// react, rendering lists (keys): https://react.dev/learn/rendering-lists
+// typescript, import and export renaming (as): https://www.typescriptlang.org/docs/handbook/modules/reference.html
+// tailwind css v4, stroke width: https://tailwindcss.com/docs/stroke-width
+// tsdoc standard: https://tsdoc.org
