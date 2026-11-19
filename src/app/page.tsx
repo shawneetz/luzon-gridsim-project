@@ -10,6 +10,7 @@
 //   no result yet     a short "how to read" guide (see EmptyGuide.tsx)
 //   solve failed      an error banner with a retry button (see ErrorBanner.tsx)
 //   result            the results tab or the tableau tab
+//   respawn           from an infeasible result, goes back to "no result yet" with the start choices
 //
 // page layout (edit the tailwind classes below):
 //   <main>      full width, so the grass strip can reach both screen edges
@@ -50,6 +51,8 @@ type Tab = "results" | "tableau";
  * - a solve that fails to reach the api gives a result with `status: "error"`,
  *   the page shows it with the error banner (retry runs the same solve again)
  *   and not through `ResultsTab`, so `ResultsTab` only sees the other statuses
+ * - respawn clears the result on purpose: the old result was made with other choices,
+ *   so keeping it next to the reset controls would be confusing
  *
  * @example
  * ```tsx
@@ -149,6 +152,25 @@ export default function Home() {
     }
   }
 
+  /**
+   * puts the choices back to the start and clears the result, used by the respawn button
+   *
+   * @remarks
+   * start choices are every plant group selected and the co2 cap switched off,
+   * the co2 limit text goes back to the default from the api
+   * it does not call the solver, the player presses solve when ready
+   * it does nothing before the options are loaded, but the button only exists
+   * after a solve, so that cannot happen in practice
+   */
+  function handleRespawn() {
+    if (!options) return;
+    setSelected(options.groups);
+    setCo2On(false);
+    setCo2Cap(String(options.defaultCo2Cap));
+    setResult(null);
+    setTab("results");
+  }
+
   // the tableau tab only works when the solver returned tableaus
   const hasTableaus = result?.tableaus && result.tableaus.length > 0;
 
@@ -217,7 +239,9 @@ export default function Home() {
               )}
 
               {/* every other result: the results tab or the tableau tab */}
-              {result && result.status !== "error" && tab === "results" && <ResultsTab result={result} />}
+              {result && result.status !== "error" && tab === "results" && (
+                <ResultsTab result={result} onRespawn={handleRespawn} />
+              )}
               {result && tab === "tableau" && hasTableaus && <TableauTab key={runId} steps={result.tableaus!} />}
             </section>
           </div>
@@ -232,7 +256,9 @@ export default function Home() {
 // react, useState: https://react.dev/reference/react/useState
 // react, useEffect: https://react.dev/reference/react/useEffect
 // react, useCallback: https://react.dev/reference/react/useCallback
+// react, responding to events: https://react.dev/learn/responding-to-events
 // mdn, promise.prototype.finally: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/finally
 // mdn, nullish coalescing (??): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing
 // tailwind css v4, max-width: https://tailwindcss.com/docs/max-width
+// cmsc 150 final project spec, failure cases (infeasible problems)
 // tsdoc standard: https://tsdoc.org

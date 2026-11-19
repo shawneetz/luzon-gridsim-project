@@ -2,6 +2,7 @@
 // it decides what to show for each status and puts the pieces into panels,
 // so the results read top to bottom as summary, then picture, then numbers
 //   1) summary   StatusBanner and StatGrid side by side in one row
+//   1b) help     only when infeasible: why it may happen, and a respawn button
 //   2) dispatch  DispatchChart at full width, with PriceRow directly under it
 //   3) numbers   DataTable (output of each plant group, with totals and demand)
 //                beside KeyInsights
@@ -17,6 +18,7 @@
 import type { ReactNode } from "react";
 import DataTable, { type FooterRow } from "./DataTable";
 import DispatchChart from "./DispatchChart";
+import InfeasibleHelp from "./InfeasibleHelp";
 import KeyInsights from "./KeyInsights";
 import PriceRow from "./PriceRow";
 import StatGrid from "./StatGrid";
@@ -62,6 +64,8 @@ function Section({ title, children }: SectionProps) {
 interface ResultsTabProps {
   /** the full response from `POST /solve`, whatever its status */
   result: SolveResponse;
+  /** called when the player presses "Respawn" on an infeasible result */
+  onRespawn: () => void;
 }
 
 /**
@@ -82,9 +86,14 @@ interface ResultsTabProps {
  * - the demand row reads the fixed demand list from the grid constants, not from
  *   the solver, like the dashed line in the chart
  *
+ * infeasible view (task 4.7):
+ * - the "you died" banner and the iteration count stay in the summary, and a second
+ *   panel lists why it may happen, with a respawn button (see InfeasibleHelp)
+ * - the respawn action itself lives in the page, because it resets the page state
+ *
  * edge cases:
  * - `status` of "invalid" or "error": only the message is shown
- * - `status` of "infeasible": only the summary panel is shown (banner and counts),
+ * - `status` of "infeasible": the summary panel and the help panel are shown,
  *   the api sends no cost, chart, table or prices
  * - `status` of "optimal": every panel is shown
  * - the demand row is cut to the number of blocks the api sent, so a short response
@@ -97,10 +106,10 @@ interface ResultsTabProps {
  *
  * @example
  * ```tsx
- * <ResultsTab result={result} />
+ * <ResultsTab result={result} onRespawn={handleRespawn} />
  * ```
  */
-export default function ResultsTab({ result }: ResultsTabProps) {
+export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
   const { status, iterations, setup, cost, dispatch, prices } = result;
 
   // bad input or a server error: just show the message, nothing to chart
@@ -133,6 +142,13 @@ export default function ResultsTab({ result }: ResultsTabProps) {
           </div>
         </div>
       </Section>
+
+      {/* section 1b: only for an infeasible problem, likely causes and the respawn button */}
+      {status === "infeasible" && (
+        <Section title="Why this may happen">
+          <InfeasibleHelp onRespawn={onRespawn} />
+        </Section>
+      )}
 
       {/* sections 2 and 3 only exist when the problem is optimal */}
       {dispatch && prices && (
@@ -184,5 +200,5 @@ export default function ResultsTab({ result }: ResultsTabProps) {
 // tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
 // tailwind css v4, styling direct children (*: variant): https://tailwindcss.com/docs/hover-focus-and-other-states#styling-direct-children
 // mdn, aria-label: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-label
-// cmsc 150 final project spec, table 1 (plant capacities) and table 2 (demand)
+// cmsc 150 final project spec, failure cases (infeasible problems), table 1 (plant capacities) and table 2 (demand)
 // tsdoc standard: https://tsdoc.org
