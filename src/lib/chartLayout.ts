@@ -8,21 +8,24 @@
 //   that area is cut into one equal slot per block, and a bar is centered in its slot
 //   the price row copies the left and right gap as percentages and cuts the same area
 //   into the same equal slots
+//
+// only the horizontal numbers matter to the price row, so the height and the top and
+// bottom padding can change without breaking the alignment
 
 /** width of the chart svg in its own units (the viewBox width) */
 export const CHART_W = 760;
 
 /** height of the chart svg in its own units (the viewBox height) */
-export const CHART_H = 340;
+export const CHART_H = 360;
 
 /**
  * empty space around the bars, in svg units
  *
  * @remarks
- * `left` is the room for the mw labels of the y axis
- * `bottom` is the room for the block icons and names under the bars
+ * `left` is the room for the y axis title and the mw labels
+ * `bottom` is the room for the three lines under each bar: icon, block name and hours
  */
-export const CHART_PAD = { left: 64, right: 16, top: 16, bottom: 44 } as const;
+export const CHART_PAD = { left: 64, right: 16, top: 16, bottom: 64 } as const;
 
 /**
  * the left and right gap of the chart as a share of its width
