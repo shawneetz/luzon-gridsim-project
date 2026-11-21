@@ -1,8 +1,7 @@
 // AppHeader.tsx
 // the top strip of the simulator: grass strip, dirt block logo, title, subtitle,
-// and a right aligned button group (only "main menu" for now, the sound toggle
-// from task 6.3 will go in the same group)
-// it holds no state, the page passes the button action in through props
+// and a right aligned button group: the sound toggle and "main menu"
+// it holds no state, the page passes the sound state and the button actions in through props
 //
 // layout (edit the tailwind classes below):
 //   outer <header>  full width, so the grass reaches both screen edges
@@ -17,6 +16,10 @@
 interface AppHeaderProps {
   /** called when the player presses "Main Menu" */
   onMainMenu: () => void;
+  /** true while sound effects are switched on */
+  soundOn: boolean;
+  /** called when the player presses the sound toggle */
+  onToggleSound: () => void;
 }
 
 // pixel map of the dirt block icon, one string per row, 8 x 8 cells
@@ -105,15 +108,24 @@ function DirtBlockIcon() {
  * edge cases:
  * - `flex-wrap` lets the button group drop under the title on phones,
  *   `ml-auto` keeps it on the right when it wraps
+ * - the group has `flex-wrap` too, so on a very narrow phone the two buttons can sit on two rows
  * - the title is an `h1`, the landing page also has an `h1` but only one of
  *   the two screens is mounted at a time
+ *
+ * sound toggle (task 6.3):
+ * - the visible text changes between "Sound: On" and "Sound: Off", so the text itself says
+ *   the state, which is why there is no `aria-pressed` (a changing label plus a pressed
+ *   state would be read twice by screen readers)
+ * - the speaker emoji is decorative and `aria-hidden`, the words carry the meaning
+ * - the button is a normal `.btn`, so it gets the 44px touch size and the focus ring
+ * - the click sound for this button is played by the page, not here
  *
  * @example
  * ```tsx
  * <AppHeader onMainMenu={() => setStarted(false)} />
  * ```
  */
-export default function AppHeader({ onMainMenu }: AppHeaderProps) {
+export default function AppHeader({ onMainMenu, soundOn, onToggleSound }: AppHeaderProps) {
   return (
     // z-40 keeps the sticky header above the tables and the chart while scrolling
     <header className={`grass-strip z-40 mb-6 border-b-4 border-black px-4 pb-5 pt-7 ${stickyOnTall}`}>
@@ -132,7 +144,10 @@ export default function AppHeader({ onMainMenu }: AppHeaderProps) {
         </div>
 
         {/* right: button group, add more buttons here (like the sound toggle) */}
-        <div role="group" aria-label="Header actions" className="ml-auto flex items-center gap-2">
+        <div role="group" aria-label="Header actions" className="ml-auto flex flex-wrap items-center gap-2">
+          <button type="button" className="btn" onClick={onToggleSound}>
+            <span aria-hidden="true">{soundOn ? "🔊" : "🔇"}</span> Sound: {soundOn ? "On" : "Off"}
+          </button>
           <button type="button" className="btn" onClick={onMainMenu}>
             Main Menu
           </button>

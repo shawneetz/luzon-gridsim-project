@@ -23,6 +23,17 @@
 //     box instead of pushing the whole page wider than the screen
 //   - the tab label "Simplex Tableau" is too long for two buttons on a 390px phone,
 //     so below sm it reads "Tableau" (two spans, one is always display: none)
+//
+// accessibility notes (task 6.2):
+//   - the two tab buttons follow the aria tabs pattern: a tablist, tabs with aria-selected
+//     and aria-controls, and one tabpanel per tab, see the remarks on Home
+//   - both panels stay in the dom, the inactive one is hidden, so aria-controls always
+//     points at a real element
+//
+// sound notes (task 6.3):
+//   - sound is off by default, the header toggle switches it, see lib/sound.ts
+//   - one click listener on the document plays the button click for the whole app
+//   - the level-up and hurt sounds play when a solve ends
 
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import AppHeader from "@/components/AppHeader";
@@ -33,6 +44,7 @@ import LandingPage from "@/components/LandingPage";
 import ResultsTab from "@/components/ResultsTab";
 import TableauTab from "@/components/TableauTab";
 import { fetchOptions, solve } from "@/lib/api";
+import { playClick, playHurt, playLevelUp, setSoundEnabled } from "@/lib/sound";
 import type { Options, SolveResponse } from "@/lib/types";
 
 /** the two tabs on the right side of the simulator */
@@ -60,6 +72,26 @@ const panelLook = "focus-visible:outline-black focus-visible:-outline-offset-2";
  * - the two tab label spans are both in the dom, but only one is displayed at a
  *   time, so screen readers read just one of them
  *
+ * tabs (task 6.2):
+ * - roles: `tablist` > `tab` buttons, and one `tabpanel` per tab linked with
+ *   `aria-controls` (tab to panel) and `aria-labelledby` (panel to tab)
+ * - roving tabindex: only the selected tab is in the tab order (`tabIndex` 0), the other
+ *   is -1, and the arrow keys move between tabs, so the whole tablist is one tab stop
+ * - keys: left and right arrows wrap around, home and end jump to the first and last tab
+ * - both panels are always rendered and the inactive one has the `hidden` attribute
+ *
+ * sound (task 6.3):
+ * - `soundOn` is the state the header toggle shows, the real switch lives in `lib/sound.ts`,
+ *   `toggleSound` updates both in the same click
+ * - the click sound comes from one listener on the document, so every button in the app
+ *   gets it without any change in its own file
+ * - the listener is added once and always on, because the play functions check the switch
+ * - the confirmation click plays when sound is turned on
+ * - turning sound off sets the real switch off before the document listener runs, so it stays silent
+ * - the level-up and hurt sounds play right after the result is saved
+ * - an `"error"` or `"invalid"` result plays no result sound
+ * - the preference is kept in memory only, so it is off again after a page reload
+ *
  * @example
  * ```tsx
  * // app router renders this file at "/" automatically, no props needed
@@ -79,6 +111,7 @@ export default function Home() {
   const [selected, setSelected] = useState<string[]>([]); // chosen plant groups
   const [co2On, setCo2On] = useState(false);              // is the co2 cap switched on
   const [co2Cap, setCo2Cap] = useState("");               // co2 limit, kept as text
+  const [soundOn, setSoundOn] = useState(false);          // are sound effects switched on (off by default)
 
   // solver output and screen state
   const [result, setResult] = useState<SolveResponse | null>(null);
@@ -119,6 +152,19 @@ export default function Home() {
     loadOptions();
   }, [loadOptions]);
 
+  // button click sound for the whole app (task 6.3)
+  // one listener on the document catches every click that bubbles up from a button
+  // playClick does nothing while sound is off, so the listener can stay attached
+  useEffect(() => {
+    function onDocumentClick(e: MouseEvent) {
+      const button = (e.target as Element | null)?.closest("button");
+      // a disabled button never fires click, the check is a safety net for disabled ancestors
+      if (button && !button.disabled) playClick();
+    }
+    document.addEventListener("click", onDocumentClick);
+    return () => document.removeEventListener("click", onDocumentClick);
+  }, []);
+
   /**
    * tries to load the options again, used by the retry button of the load error banner
    *
@@ -129,6 +175,19 @@ export default function Home() {
   function retryOptions() {
     setRetryingOptions(true);
     loadOptions().finally(() => setRetryingOptions(false));
+  }
+
+  /**
+   * switches sound effects on or off, used by the header toggle
+   *
+   * @remarks
+   * it flips the real switch in `lib/sound.ts` first, in the same click, so the browser
+   * lets the audio context start, then it updates the state the header shows
+   */
+  function toggleSound() {
+    const next = !soundOn;
+    setSoundEnabled(next);
+    setSoundOn(next);
   }
 
   /**
@@ -152,9 +211,12 @@ export default function Home() {
   async function handleSolve() {
     setLoading(true);
     try {
-      setResult(await solve({ groups: selected, co2On, co2Cap }));
+      const response = await solve({ groups: selected, co2On, co2Cap });
+      setResult(response);
       setRunId((id) => id + 1);
       setTab("results");
+      if (response.status === "optimal") playLevelUp();
+      else if (response.status === "infeasible") playHurt();
     } catch {
       setResult({ status: "error", message: "Could not reach the solver API. Is the R API running?" });
     } finally {
@@ -197,7 +259,7 @@ export default function Home() {
   return (
     <main className="pb-10">
       {/* header: logo, title and the button group, goes back to the landing page on "main menu" */}
-      <AppHeader onMainMenu={() => setStarted(false)} />
+      <AppHeader onMainMenu={() => setStarted(false)} soundOn={soundOn} onToggleSound={toggleSound} />
 
       {/* content wrapper: same max width as the header, centered, with side padding */}
       <div className="mx-auto w-full max-w-[1320px] px-4">
