@@ -24,6 +24,8 @@ readBasic <- function(tableau) {
 
 # Runs the Simplex method on the initial tableau
 # Instead of printing, it keeps every tableau and its basic solution in "steps" so the UI can show them
+# Each step also keeps the pivot that was chosen FROM it (pivotRow and pivotCol, 1-based)
+# The final tableau has no pivot, so its step never gets these two fields
 Simplex <- function(tableau) {
 
   rows <- nrow(tableau)
@@ -70,6 +72,12 @@ Simplex <- function(tableau) {
     pivotRow <- which.min(testRatio)
     pivotElement <- tableau[pivotRow, pivotCol]
 
+    # save the pivot on the step of this iteration, before the elimination changes the tableau
+    # it is only saved here, after both are known, so an infeasible stop gets no pivot
+    # (steps[[iterations + 1]] is the step that was saved at the top of this loop)
+    steps[[iterations + 1]]$pivotRow <- pivotRow
+    steps[[iterations + 1]]$pivotCol <- pivotCol
+
     # Gauss-Jordan. First, normalize the pivot row: nPR = PR / PE
     normRow <- tableau[pivotRow, ] / pivotElement
     tableau[pivotRow, ] <- normRow
@@ -91,3 +99,8 @@ Simplex <- function(tableau) {
 
   return(list(status = status, iterations = iterations, finalTableau = tableau, steps = steps))
 }
+
+# references:
+# r, assigning into a list element with $<-: https://stat.ethz.ch/R-manual/R-devel/library/base/html/Extract.html
+# r, which.min: https://stat.ethz.ch/R-manual/R-devel/library/base/html/which.min.html
+# cmsc 150 laboratory topic 5, simplex method (pivot column, pivot row and pivot element)
