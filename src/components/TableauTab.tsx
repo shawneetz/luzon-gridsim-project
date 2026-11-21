@@ -5,12 +5,14 @@
 // top: an xp bar strip that shows "iteration n of total" (see XpBar.tsx), click it
 // or focus it and use the arrow keys to move
 // below it: first, previous, a dropdown to jump to any iteration, next and last
-// then the tableau of the chosen iteration with a "basic solution" row at the bottom,
-// and the pivot marked in gold (see DataTable.tsx)
+// then the title, a one line pivot summary (see PivotSummary.tsx), and the tableau of
+// the chosen iteration with a "basic solution" row at the bottom and the pivot marked in
+// gold (see DataTable.tsx)
 // layout: a flex column; the button row wraps on small screens
 
 import { useState } from "react";
 import DataTable, { type PivotHighlight } from "./DataTable";
+import PivotSummary from "./PivotSummary";
 import XpBar from "./XpBar";
 import type { TableauStep } from "@/lib/types";
 
@@ -36,7 +38,7 @@ function pivotOf(step: TableauStep): PivotHighlight | undefined {
 }
 
 /**
- * simplex tableau viewer with an xp bar, iteration buttons and pivot highlight
+ * simplex tableau viewer with an xp bar, iteration buttons, pivot summary and pivot highlight
  *
  * @param props.steps - every saved iteration, iteration 0 first
  *
@@ -52,6 +54,8 @@ function pivotOf(step: TableauStep): PivotHighlight | undefined {
  * - with a single step the bar is full and every navigation button is disabled
  * - the "basic solution" row is added at the bottom of the rows, the pivot row index
  *   still matches because that row is always last
+ * - the summary gets the plain `step`, not the rows with the basic solution added, so it
+ *   reads the pivot element from the real tableau values
  *
  * @example
  * ```tsx
@@ -116,8 +120,11 @@ export default function TableauTab({ steps }: { steps: TableauStep[] }) {
         </button>
       </div>
 
-      {/* the tableau rows plus the basic solution row at the bottom, pivot marked in gold */}
+      {/* title, then one line that says which pivot this iteration used */}
       <h3 className="subheading">{title}</h3>
+      <PivotSummary step={step} />
+
+      {/* the tableau rows plus the basic solution row at the bottom, pivot marked in gold */}
       <DataTable
         corner=""
         columns={step.colNames}
