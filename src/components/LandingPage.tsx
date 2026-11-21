@@ -25,6 +25,9 @@
 //   menu buttons: max-w-xs (320px), centered by the items-center of the wrapper
 //   day and night button: pinned to the top right with absolute right-4 top-4
 //   footer: one row from sm up (corner text, disclaimer, corner text), stacked on phones
+//   wrapper padding (task 6.1): pt-16 keeps the logo under the day and night button on
+//   phones, pb-24 keeps the three line footer from covering the buttons on short screens,
+//   from sm up the footer is one line, so the bottom padding goes back to pb-12
 
 import { useId, useRef, useState, useSyncExternalStore } from "react";
 import LandingBackground from "./LandingBackground";
@@ -94,6 +97,13 @@ const getNightOnServer = () => false;
  * - `m-auto` is needed because tailwind's preflight resets the margin that
  *   centers a modal dialog
  *
+ * responsive edge cases (task 6.1):
+ * - the splash text sticks out to the right of the logo, on a 390px phone that can push
+ *   the page wider than the screen, so the wrapper has `overflow-x-clip` (clip, not
+ *   hidden, so it does not turn the wrapper into a scroll container)
+ * - the footer is `absolute`, so it takes no space in the layout, the bottom padding is
+ *   what keeps the menu buttons clear of it
+ *
  * edge cases:
  * - the wrapper must keep `relative isolate`, because the background uses
  *   `-z-10` and would go behind the page body without it
@@ -124,7 +134,7 @@ export default function LandingPage({ onStart }: LandingPageProps) {
 
   return (
     // isolate keeps the background (-z-10) inside this wrapper
-    <div className="relative isolate flex min-h-screen flex-col items-center justify-center gap-12 px-4">
+    <div className="relative isolate flex min-h-screen flex-col items-center justify-center gap-12 overflow-x-clip px-4 pb-24 pt-16 sm:pb-12">
       {/* background scenery: sky, stars, sun, moon, clouds, hills and ground */}
       <LandingBackground night={night} />
 
@@ -218,3 +228,18 @@ export default function LandingPage({ onStart }: LandingPageProps) {
     </div>
   );
 }
+
+// references:
+// mdn, dialog element: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/dialog
+// mdn, htmldialogelement.showmodal(): https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/showModal
+// mdn, overflow (clip value): https://developer.mozilla.org/en-US/docs/Web/CSS/overflow#clip
+// mdn, :focus-visible: https://developer.mozilla.org/en-US/docs/Web/CSS/:focus-visible
+// react, useSyncExternalStore: https://react.dev/reference/react/useSyncExternalStore
+// react, useRef: https://react.dev/reference/react/useRef
+// react, useId: https://react.dev/reference/react/useId
+// tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
+// tailwind css v4, padding: https://tailwindcss.com/docs/padding
+// tailwind css v4, responsive design: https://tailwindcss.com/docs/responsive-design
+// tailwind css v4, hover, focus and other states (group, has): https://tailwindcss.com/docs/hover-focus-and-other-states
+// next.js, server and client components: https://nextjs.org/docs/app/getting-started/server-and-client-components
+// tsdoc standard: https://tsdoc.org

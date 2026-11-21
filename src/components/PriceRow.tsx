@@ -5,7 +5,8 @@
 // it holds no state, everything comes in through props
 //
 // layout (edit the tailwind classes below):
-//   below xl: 3 columns (two rows of three), the slots are too narrow to line up with the bars
+//   phones (below sm): 2 columns, three rows of two, so a price like 14,700.00 never gets squeezed
+//   sm up to xl: 3 columns (two rows of three)
 //   from xl up: one row that lines up with the chart above it
 //     - the outer box copies the border and padding of the chart box (border-2 + p-3),
 //       so its content is exactly as wide as the svg
@@ -91,6 +92,12 @@ interface PriceRowProps {
  * the min and max are worked out here from `values`, so the colors always
  * match the prices that are on screen
  *
+ * responsive (task 6.1):
+ * - on a 390px phone the price panel is only about 280px wide, three columns would leave
+ *   about 85px per slot, which is too tight for the price, so below sm it is two columns
+ *   (`grid-cols-2`), and `sm:grid-cols-3` brings back the three column layout
+ * - a slot is a plain div (not clickable), so the 44px touch rule does not apply to it
+ *
  * edge cases:
  * - the custom properties are set in `style`, and typescript does not know them, so the
  *   object is cast to `CSSProperties`
@@ -103,7 +110,7 @@ interface PriceRowProps {
  * - an empty `values` list gives `Math.min()` of nothing, which is `Infinity`, but no slot
  *   is drawn then, so the color is never used
  * - a price like 14,700.00 needs about 85px at xl, the slot is about 105px wide at a 1280px
- *   window, so the padding is kept small (`xl:px-1`), at narrower widths the 3 column layout takes over
+ *   window, so the padding is kept small (`xl:px-1`), at narrower widths the 2 or 3 column layout takes over
  * - `title` only shows on mouse hover, the price itself is always on screen, so nothing is lost on touch
  *
  * @example
@@ -121,7 +128,7 @@ export default function PriceRow({ blocks, values }: PriceRowProps) {
     <div className="xl:px-[calc(0.75rem+2px)]">
       {/* inner grid: copies the gaps of the svg, then one equal column per block (xl only) */}
       <div
-        className="grid grid-cols-3 gap-1.5 xl:grid-cols-(--price-cols) xl:gap-0 xl:pl-(--price-left) xl:pr-(--price-right)"
+        className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-(--price-cols) xl:gap-0 xl:pl-(--price-left) xl:pr-(--price-right)"
         style={{ ...gridVars, "--price-cols": `repeat(${blocks.length}, minmax(0, 1fr))` } as CSSProperties}
       >
         {blocks.map((block, t) => (
@@ -158,6 +165,6 @@ export default function PriceRow({ blocks, values }: PriceRowProps) {
 // mdn, math.min: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min
 // tailwind css v4, using css variables in utilities (the (--name) syntax): https://tailwindcss.com/docs/adding-custom-styles#using-arbitrary-values
 // tailwind css v4, grid template columns: https://tailwindcss.com/docs/grid-template-columns
-// tailwind css v4, responsive design (xl: breakpoint): https://tailwindcss.com/docs/responsive-design
+// tailwind css v4, responsive design (sm: and xl: breakpoints): https://tailwindcss.com/docs/responsive-design
 // cmsc 150 final project spec, shadow prices and the price of electricity (price = S / h)
 // tsdoc standard: https://tsdoc.org

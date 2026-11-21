@@ -11,6 +11,7 @@
 //                   on small screens the row wraps and the buttons drop under the title
 //   sticky          only when the window is at least 768px wide AND 800px tall,
 //                   see the remarks on the component for why
+//   title size      1.25rem on phones, the full 1.9rem token from sm up (task 6.1)
 
 /** props for the {@link AppHeader} component */
 interface AppHeaderProps {
@@ -95,6 +96,12 @@ function DirtBlockIcon() {
  *   clears this header (about `md:top-32`) only inside the same media query,
  *   otherwise the panel would slide under the header on tall screens
  *
+ * responsive decision (task 6.1):
+ * - the title uses the press start 2p font, which is very wide (about one
+ *   font size per letter), "Luzon GridSim" at 1.9rem is about 395px, wider than
+ *   a 390px phone, so below sm it is 1.25rem (about 260px, with the icon it fits)
+ * - from sm up the normal `text-pixel-title` token is used again
+ *
  * edge cases:
  * - `flex-wrap` lets the button group drop under the title on phones,
  *   `ml-auto` keeps it on the right when it wraps
@@ -115,7 +122,7 @@ export default function AppHeader({ onMainMenu }: AppHeaderProps) {
         <div className="flex items-center gap-4">
           <DirtBlockIcon />
           <div>
-            <h1 className="font-pixel text-pixel-title font-normal text-white pixel-shadow">
+            <h1 className="font-pixel text-[1.25rem] font-normal text-white pixel-shadow sm:text-pixel-title">
               Luzon <span className="text-gold">GridSim</span>
             </h1>
             <p className="mt-3 text-large text-white pixel-shadow-sm">
@@ -137,6 +144,8 @@ export default function AppHeader({ onMainMenu }: AppHeaderProps) {
 
 // references:
 // tailwind css, arbitrary variants (media query in square brackets): https://tailwindcss.com/docs/hover-focus-and-other-states#using-arbitrary-variants
+// tailwind css v4, arbitrary values (text-[1.25rem]): https://tailwindcss.com/docs/adding-custom-styles#using-arbitrary-values
+// tailwind css v4, responsive design (sm: breakpoint): https://tailwindcss.com/docs/responsive-design
 // tailwind css, position (sticky): https://tailwindcss.com/docs/position
 // mdn, position: sticky: https://developer.mozilla.org/en-US/docs/Web/CSS/position
 // mdn, height media feature: https://developer.mozilla.org/en-US/docs/Web/CSS/@media/height

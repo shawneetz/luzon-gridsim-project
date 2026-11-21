@@ -13,6 +13,8 @@
 //   if you change the column count, also change how `align` is picked for the tooltip
 //   image size is the size-10 class on the <img> (40px), change it to resize all icons
 //   sticky: from md up the panel sticks while the results scroll, see `stickyPanel`
+//   touch targets (task 6.1): every slot is taller than 44px, buttons get min-h-11 from
+//   .btn, and the co2 checkbox row has min-h-11 so the whole row is the tap area
 
 import { useId } from "react";
 import MiningBar from "./MiningBar";
@@ -37,7 +39,9 @@ interface Props {
 
 // look of a plant slot. "slot" (from globals.css) gives the gray bevel
 // h-full w-full makes the button fill the tooltip wrapper, which fills the grid cell
-const slotBase = "slot flex h-full w-full flex-col items-start gap-0.5 p-2 text-left text-ink";
+// min-h-11 is a safety net: a slot is already about 100px tall, but this keeps the
+// 44px touch rule true even if the content gets smaller later
+const slotBase = "slot flex h-full min-h-11 w-full flex-col items-start gap-0.5 p-2 text-left text-ink";
 const slotOff = "hover:bg-slot-hover";                                         // not selected
 const slotOn = "border-4 border-white bg-slot-selected pb-3.5 outline-2 outline-black"; // selected
 
@@ -113,6 +117,10 @@ function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
  * - while `loading` is true the button shows {@link MiningBar} instead of "Solve"
  * - `aria-busy` tells screen readers the button is working, and the label inside
  *   the bar ("Mining...") is the text they read
+ *
+ * touch targets (task 6.1):
+ * - the checkbox itself is only 20px, so its label row is at least 44px tall
+ *   (`min-h-11`) and the whole row toggles the box, not just the tiny square
  *
  * edge cases:
  * - the selection count uses `groups.length` as the total, so it stays right
@@ -215,7 +223,8 @@ export default function ControlPanel(props: Props) {
 
       {/* co2 cap: the limit box is disabled until the toggle is on */}
       <h2 className="heading">CO₂ cap</h2>
-      <label className="flex cursor-pointer items-center gap-2.5">
+      {/* min-h-11 makes the whole row a 44px tap area for the small checkbox */}
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
         <input
           type="checkbox"
           className="size-5 accent-grass-dark"
@@ -271,11 +280,13 @@ export default function ControlPanel(props: Props) {
 
 // references:
 // wai-aria authoring practices, tooltip pattern: https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/
+// w3c wcag 2.2, target size (minimum), 2.5.8: https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
 // react, useId: https://react.dev/reference/react/useId
 // react, render props pattern (children as a function): https://react.dev/reference/react/Children
 // react, rendering lists (keys): https://react.dev/learn/rendering-lists
 // tailwind css v4, position (sticky): https://tailwindcss.com/docs/position
 // tailwind css v4, max-height: https://tailwindcss.com/docs/max-height
+// tailwind css v4, min-height: https://tailwindcss.com/docs/min-height
 // tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
 // tailwind css v4, border-color: https://tailwindcss.com/docs/border-color
 // tailwind css v4, arbitrary variants: https://tailwindcss.com/docs/hover-focus-and-other-states#using-arbitrary-variants
@@ -285,4 +296,4 @@ export default function ControlPanel(props: Props) {
 // mdn, alert role: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/alert_role
 // mdn, aria-live: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-live
 // mdn, number.toLocaleString: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString
-// tsdoc standard: https://tsdoc.org
+// tsdoc standard: https://tsdoc.org  

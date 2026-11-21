@@ -18,6 +18,11 @@
 //   percentages of that wrapper, so it follows the segment when the svg scales
 //   tooltip width: w-44 (176px), it sits beside the bar, on the right for the left half
 //   of the blocks and on the left for the right half, so it does not cover the bar
+//
+// responsive (task 6.1):
+//   below md the wrapper is at least 600px wide inside a sideways scrolling box, so the
+//   axis text stays readable on a phone instead of shrinking to about 6px
+//   from md up the chart fills its box again, like before
 
 import { useState } from "react";
 import { CHART_H as H, CHART_PAD as PAD, CHART_W as W } from "@/lib/chartLayout";
@@ -70,8 +75,18 @@ const tooltipBox =
   "pointer-events-none absolute z-10 w-44 border-2 border-tooltip-border bg-tooltip-bg px-3 py-2 text-left text-small leading-tight text-white outline-2 outline-black";
 
 // look of a legend button: reset the button look, hidden groups are dimmed and crossed out
+// max-md:min-h-11 makes each item a 44px touch target on phones and tablets in portrait,
+// from md up it is the normal text height so the legend stays compact
 const legendItem =
-  "inline-flex cursor-pointer items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-white";
+  "inline-flex cursor-pointer items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-white max-md:min-h-11";
+
+// the sideways scroll box around the chart
+// focus-visible outline shows when the keyboard focuses it, so keyboard users can scroll it with the arrows
+const scrollBox = "overflow-x-auto focus-visible:outline-2 focus-visible:outline-white";
+
+// the chart wrapper: relative for the tooltip, and a minimum width on small screens so the
+// svg text stays readable (the scroll box above lets the rest scroll sideways)
+const chartWrap = "relative min-w-[600px] md:min-w-0";
 
 /**
  * stacked bar chart of the dispatch per block, with the demand drawn on top as a dashed line
@@ -98,6 +113,16 @@ const legendItem =
  *   keyboard focusable, the text alternative for the chart comes in the accessibility task
  * - the size and the padding are shared with the price row, if you change them in
  *   `lib/chartLayout.ts` both follow, do not hardcode them again here
+ *
+ * responsive edge cases (task 6.1):
+ * - the tooltip is positioned in percentages of the `chartWrap` box, which is as wide as
+ *   the svg, so it still lines up with the segment when the svg is wider than the screen
+ * - `overflow-x-auto` also clips the y direction, but the tooltip is clamped inside the
+ *   chart height, so it is never cut
+ * - the scroll box has `tabIndex={0}` and a label, because a scrollable area that cannot
+ *   take focus is not reachable with the keyboard
+ * - the price row under the chart does not scroll with it, below xl it is its own grid
+ *   (see PriceRow.tsx), so the two only line up from xl up, which is the same as before
  *
  * @example
  * ```tsx
@@ -156,98 +181,102 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
 
   return (
     <div className="screen p-3">
-      {/* relative wrapper: the tooltip is positioned against the svg, not the whole box */}
-      <div className="relative">
-        {/* crispEdges keeps the bars sharp and pixel-like */}
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="block h-auto w-full [shape-rendering:crispEdges]"
-          role="img"
-          aria-label="Stacked dispatch per block compared with demand"
-        >
-          {/* y axis title, turned so it reads bottom to top */}
-          <text
-            className="fill-chart-text font-body text-[15px]"
-            transform={`translate(10 ${(PAD.top + H - PAD.bottom) / 2}) rotate(-90)`}
-            textAnchor="middle"
+      {/* scroll box: on phones the chart is wider than the screen and scrolls sideways */}
+      <div className={scrollBox} tabIndex={0} role="region" aria-label="Dispatch chart, scrolls sideways on small screens">
+        {/* relative wrapper: the tooltip is positioned against the svg, not the whole box */}
+        <div className={chartWrap}>
+          {/* crispEdges keeps the bars sharp and pixel-like */}
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className="block h-auto w-full [shape-rendering:crispEdges]"
+            role="img"
+            aria-label="Stacked dispatch per block compared with demand"
           >
-            MW
-          </text>
+            {/* y axis title, turned so it reads bottom to top */}
+            <text
+              className="fill-chart-text font-body text-[15px]"
+              transform={`translate(10 ${(PAD.top + H - PAD.bottom) / 2}) rotate(-90)`}
+              textAnchor="middle"
+            >
+              MW
+            </text>
 
-          {/* grid lines and mw labels */}
-          {ticks.map((mw) => (
-            <g key={mw}>
-              <line className="stroke-screen-edge" x1={PAD.left} x2={W - PAD.right} y1={y(mw)} y2={y(mw)} />
-              <text className="fill-chart-text font-body text-[15px]" x={PAD.left - 8} y={y(mw) + 5} textAnchor="end">
-                {mw.toLocaleString("en-US")}
-              </text>
-            </g>
-          ))}
+            {/* grid lines and mw labels */}
+            {ticks.map((mw) => (
+              <g key={mw}>
+                <line className="stroke-screen-edge" x1={PAD.left} x2={W - PAD.right} y1={y(mw)} y2={y(mw)} />
+                <text className="fill-chart-text font-body text-[15px]" x={PAD.left - 8} y={y(mw) + 5} textAnchor="end">
+                  {mw.toLocaleString("en-US")}
+                </text>
+              </g>
+            ))}
 
-          {/* one rect per visible segment, the hovered one gets a white frame */}
-          {segments.map((seg) => {
-            const isActive = active === seg;
-            return (
-              <rect
-                key={`${seg.group}-${seg.t}`}
-                className={`cursor-pointer stroke-2 ${isActive ? "stroke-white" : "stroke-black"}`}
-                x={centerX(seg.t) - barWidth / 2}
-                y={seg.top}
-                width={barWidth}
-                height={seg.bottom - seg.top}
-                fill={styleOf(seg.group).color}
-                onMouseEnter={() => setHovered({ group: seg.group, t: seg.t })}
-                onMouseLeave={() => setHovered(null)}
-              />
-            );
-          })}
+            {/* one rect per visible segment, the hovered one gets a white frame */}
+            {segments.map((seg) => {
+              const isActive = active === seg;
+              return (
+                <rect
+                  key={`${seg.group}-${seg.t}`}
+                  className={`cursor-pointer stroke-2 ${isActive ? "stroke-white" : "stroke-black"}`}
+                  x={centerX(seg.t) - barWidth / 2}
+                  y={seg.top}
+                  width={barWidth}
+                  height={seg.bottom - seg.top}
+                  fill={styleOf(seg.group).color}
+                  onMouseEnter={() => setHovered({ group: seg.group, t: seg.t })}
+                  onMouseLeave={() => setHovered(null)}
+                />
+              );
+            })}
 
-          {/* demand line (redstone): dashed red, it never hides */}
-          <polyline
-            className="pointer-events-none fill-none stroke-redstone stroke-[3] [stroke-dasharray:8_5]"
-            points={demand.map((d, t) => `${centerX(t)},${y(d)}`).join(" ")}
-          />
+            {/* demand line (redstone): dashed red, it never hides */}
+            <polyline
+              className="pointer-events-none fill-none stroke-redstone stroke-[3] [stroke-dasharray:8_5]"
+              points={demand.map((d, t) => `${centerX(t)},${y(d)}`).join(" ")}
+            />
 
-          {/* x axis: time-of-day icon, block name and hours under each bar */}
-          {blocks.map((name, t) => (
-            <g key={name}>
-              <text x={centerX(t)} y={H - 42} textAnchor="middle" fontSize="16">
-                {blockIcons[t]}
-              </text>
-              <text className="fill-chart-text font-body text-[15px]" x={centerX(t)} y={H - 26} textAnchor="middle">
-                {name}
-              </text>
-              <text className="fill-label font-body text-[13px]" x={centerX(t)} y={H - 9} textAnchor="middle">
-                {blockHours[t]}
-              </text>
-            </g>
-          ))}
-        </svg>
+            {/* x axis: time-of-day icon, block name and hours under each bar */}
+            {blocks.map((name, t) => (
+              <g key={name}>
+                <text x={centerX(t)} y={H - 42} textAnchor="middle" fontSize="16">
+                  {blockIcons[t]}
+                </text>
+                <text className="fill-chart-text font-body text-[15px]" x={centerX(t)} y={H - 26} textAnchor="middle">
+                  {name}
+                </text>
+                <text className="fill-label font-body text-[13px]" x={centerX(t)} y={H - 9} textAnchor="middle">
+                  {blockHours[t]}
+                </text>
+              </g>
+            ))}
+          </svg>
 
-        {/* tooltip: group, block, mw and share of demand
-            left and top are percentages of the wrapper, so it follows the segment at any width
-            clamp keeps the middle of the tooltip inside the chart, even for a segment near an edge */}
-        {active && (
-          <div
-            role="tooltip"
-            className={tooltipBox}
-            style={{
-              left: `${tooltipLeft}%`,
-              top: `clamp(${TOOLTIP_HALF}, ${tooltipMiddleY}%, calc(100% - ${TOOLTIP_HALF}))`,
-              transform: `translate(${tooltipOnRight ? "0" : "-100%"}, -50%)`,
-            }}
-          >
-            <span className="block text-body text-white">{active.group}</span>
-            <span className="block text-label">
-              {blocks[active.t]} · {blockHours[active.t]}
-            </span>
-            <span className="mt-1 block text-gold">{formatNumber(active.mw)} MW</span>
-            <span className="block text-label">{((active.mw / demand[active.t]) * 100).toFixed(1)}% of demand</span>
-          </div>
-        )}
+          {/* tooltip: group, block, mw and share of demand
+              left and top are percentages of the wrapper, so it follows the segment at any width
+              clamp keeps the middle of the tooltip inside the chart, even for a segment near an edge */}
+          {active && (
+            <div
+              role="tooltip"
+              className={tooltipBox}
+              style={{
+                left: `${tooltipLeft}%`,
+                top: `clamp(${TOOLTIP_HALF}, ${tooltipMiddleY}%, calc(100% - ${TOOLTIP_HALF}))`,
+                transform: `translate(${tooltipOnRight ? "0" : "-100%"}, -50%)`,
+              }}
+            >
+              <span className="block text-body text-white">{active.group}</span>
+              <span className="block text-label">
+                {blocks[active.t]} · {blockHours[active.t]}
+              </span>
+              <span className="mt-1 block text-gold">{formatNumber(active.mw)} MW</span>
+              <span className="block text-label">{((active.mw / demand[active.t]) * 100).toFixed(1)}% of demand</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* legend: color key for the segments, click a group to hide or show it */}
+      {/* legend: color key for the segments, click a group to hide or show it
+          it sits outside the scroll box, so it stays in view while the chart scrolls */}
       <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-chart-text">
         {groups.map((group) => {
           const isHidden = hidden.includes(group);
@@ -286,12 +315,19 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
 // mdn, svg polyline: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/polyline
 // mdn, svg text-anchor: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/text-anchor
 // mdn, css clamp(): https://developer.mozilla.org/en-US/docs/Web/CSS/clamp
+// mdn, overflow-x: https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-x
+// mdn, tabindex (keyboard access to scrollable regions): https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/tabindex
+// mdn, region role: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/region_role
 // mdn, aria-pressed: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-pressed
 // mdn, array.prototype.find: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
 // mdn, array.prototype.reduce: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce
 // mdn, number.toFixed: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed
+// w3c wcag 2.2, target size (minimum), 2.5.8: https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
 // wai-aria authoring practices, tooltip pattern: https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/
 // tailwind css v4, stroke: https://tailwindcss.com/docs/stroke
+// tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
+// tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
+// tailwind css v4, responsive design (max-md: variant): https://tailwindcss.com/docs/responsive-design#targeting-a-breakpoint-range
 // tailwind css v4, text decoration (line-through): https://tailwindcss.com/docs/text-decoration-line
 // cmsc 150 final project spec, table 2 (demand and block hours)
 // tsdoc standard: https://tsdoc.org

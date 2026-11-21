@@ -10,7 +10,6 @@
 //   no result yet     a short "how to read" guide (see EmptyGuide.tsx)
 //   solve failed      an error banner with a retry button (see ErrorBanner.tsx)
 //   result            the results tab or the tableau tab
-//   respawn           from an infeasible result, goes back to "no result yet" with the start choices
 //
 // page layout (edit the tailwind classes below):
 //   <main>      full width, so the grass strip can reach both screen edges
@@ -18,6 +17,12 @@
 //               (see AppHeader.tsx, it is capped at 1320px like the content below)
 //   grid        controls on the left (320px), results on the right (rest of the width)
 //               on small screens it becomes one column
+//
+// responsive notes (task 6.1):
+//   - the right panel has min-w-0, so a wide table or chart scrolls inside its own
+//     box instead of pushing the whole page wider than the screen
+//   - the tab label "Simplex Tableau" is too long for two buttons on a 390px phone,
+//     so below sm it reads "Tableau" (two spans, one is always display: none)
 
 import { useCallback, useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
@@ -51,8 +56,8 @@ type Tab = "results" | "tableau";
  * - a solve that fails to reach the api gives a result with `status: "error"`,
  *   the page shows it with the error banner (retry runs the same solve again)
  *   and not through `ResultsTab`, so `ResultsTab` only sees the other statuses
- * - respawn clears the result on purpose: the old result was made with other choices,
- *   so keeping it next to the reset controls would be confusing
+ * - the two tab label spans are both in the dom, but only one is displayed at a
+ *   time, so screen readers read just one of them
  *
  * @example
  * ```tsx
@@ -152,25 +157,6 @@ export default function Home() {
     }
   }
 
-  /**
-   * puts the choices back to the start and clears the result, used by the respawn button
-   *
-   * @remarks
-   * start choices are every plant group selected and the co2 cap switched off,
-   * the co2 limit text goes back to the default from the api
-   * it does not call the solver, the player presses solve when ready
-   * it does nothing before the options are loaded, but the button only exists
-   * after a solve, so that cannot happen in practice
-   */
-  function handleRespawn() {
-    if (!options) return;
-    setSelected(options.groups);
-    setCo2On(false);
-    setCo2Cap(String(options.defaultCo2Cap));
-    setResult(null);
-    setTab("results");
-  }
-
   // the tableau tab only works when the solver returned tableaus
   const hasTableaus = result?.tableaus && result.tableaus.length > 0;
 
@@ -206,8 +192,9 @@ export default function Home() {
               loading={loading}
             />
 
-            {/* right side: tabs and their content */}
-            <section className="panel w-full p-4">
+            {/* right side: tabs and their content
+                min-w-0 lets this panel shrink inside the grid, so wide content scrolls inside itself */}
+            <section className="panel w-full min-w-0 p-4">
               {/* tab buttons share the row equally; the active one turns green */}
               <div className="mb-4 flex gap-1.5">
                 <button
@@ -221,7 +208,9 @@ export default function Home() {
                   onClick={() => setTab("tableau")}
                   disabled={!hasTableaus}
                 >
-                  Simplex Tableau
+                  {/* short label on phones, full label from sm up */}
+                  <span className="sm:hidden">Tableau</span>
+                  <span className="hidden sm:inline">Simplex Tableau</span>
                 </button>
               </div>
 
@@ -239,9 +228,7 @@ export default function Home() {
               )}
 
               {/* every other result: the results tab or the tableau tab */}
-              {result && result.status !== "error" && tab === "results" && (
-                <ResultsTab result={result} onRespawn={handleRespawn} />
-              )}
+              {result && result.status !== "error" && tab === "results" && <ResultsTab result={result} />}
               {result && tab === "tableau" && hasTableaus && <TableauTab key={runId} steps={result.tableaus!} />}
             </section>
           </div>
@@ -256,9 +243,11 @@ export default function Home() {
 // react, useState: https://react.dev/reference/react/useState
 // react, useEffect: https://react.dev/reference/react/useEffect
 // react, useCallback: https://react.dev/reference/react/useCallback
-// react, responding to events: https://react.dev/learn/responding-to-events
 // mdn, promise.prototype.finally: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/finally
 // mdn, nullish coalescing (??): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing
+// mdn, css grid min-width auto problem (why min-w-0 is needed): https://developer.mozilla.org/en-US/docs/Web/CSS/min-width
 // tailwind css v4, max-width: https://tailwindcss.com/docs/max-width
-// cmsc 150 final project spec, failure cases (infeasible problems)
+// tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
+// tailwind css v4, display (hidden, sm:inline): https://tailwindcss.com/docs/display
+// tailwind css v4, responsive design: https://tailwindcss.com/docs/responsive-design
 // tsdoc standard: https://tsdoc.org
