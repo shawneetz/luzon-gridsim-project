@@ -24,14 +24,24 @@ export interface PivotHighlight {
   col: number;
 }
 
+export interface FooterRow {
+  label: string;
+  values: (number | string)[];
+  tone?: "total" | "demand";
+}
+
 /** props for the {@link DataTable} component */
 interface Props {
   corner: string;                // text in the top-left cell
   columns: string[];             // column headers
   rowLabels: string[];           // label at the start of each row
   rows: (number | string)[][];   // the cell values, one array per row
-  /** pivot to mark, leave it out for a plain table (default: none) */
-  highlight?: PivotHighlight;
+  /** pivot position or matrix of full-capacity cells */
+  highlight?: PivotHighlight | boolean[][];
+  /** optional footer rows, used by the dispatch results table */
+  footerRows?: FooterRow[];
+  /** accessible label for the scroll region */
+  label?: string;
 }
 
 // shared by every cell
@@ -98,16 +108,18 @@ function pivotCellClass(isPivotRow: boolean, isPivotCol: boolean): string {
  * <DataTable corner="" columns={cols} rowLabels={rowNames} rows={values} highlight={{ row: 2, col: 5 }} />
  * ```
  */
-export default function DataTable({ corner: cornerText, columns, rowLabels, rows, highlight }: Props) {
+export default function DataTable({ corner: cornerText, columns, rowLabels, rows, highlight, footerRows = [], label = "Scrollable table" }: Props) {
+  const pivot = Array.isArray(highlight) ? undefined : highlight;
+  const fullCapacity = Array.isArray(highlight) ? highlight : undefined;
   return (
     // scrollable box so wide tableaus do not break the page (change max-h to resize)
-    <div className="screen max-h-[560px] overflow-auto">
+    <div className="screen max-h-[560px] overflow-auto" tabIndex={0} role="region" aria-label={label}>
       <table className="border-separate border-spacing-0 font-body text-table text-white tabular-nums">
         <thead>
           <tr>
             <th className={corner}>{cornerText}</th>
             {columns.map((name, j) => (
-              <th key={j} className={`${colHead} ${highlight?.col === j ? colHeadPivot : ""}`}>
+              <th key={j} className={`${colHead} ${pivot?.col === j ? colHeadPivot : ""}`}>
                 {name}
               </th>
             ))}
@@ -117,17 +129,18 @@ export default function DataTable({ corner: cornerText, columns, rowLabels, rows
           {rows.map((row, i) => (
             // "group" lets the cells react when the row is hovered
             <tr key={i} className="group">
-              <th className={`${rowHead} ${highlight?.row === i ? rowHeadPivot : ""}`}>{rowLabels[i]}</th>
+              <th className={`${rowHead} ${pivot?.row === i ? rowHeadPivot : ""}`}>{rowLabels[i]}</th>
               {row.map((cellValue, j) => {
-                const isPivotRow = highlight?.row === i;
-                const isPivotCol = highlight?.col === j;
+                const isPivotRow = pivot?.row === i;
+                const isPivotCol = pivot?.col === j;
                 const isElement = isPivotRow && isPivotCol;
+                const isFull = fullCapacity?.[i]?.[j] === true;
                 // dim the zeros (never on the pivot element); format numbers, show text as is
-                const dim = cellValue === 0 && !isElement ? "text-dim" : "";
+                const dim = cellValue === 0 && !isElement && !isFull ? "text-dim" : "";
                 return (
                   <td
                     key={j}
-                    className={`${cell} text-right ${pivotCellClass(isPivotRow, isPivotCol)} ${
+                    className={`${cell} text-right ${pivotCellClass(isPivotRow, isPivotCol)} ${isFull ? "bg-gold font-bold text-ink" : ""} ${
                       isElement ? "" : "group-hover:bg-row-hover"
                     } ${dim}`}
                   >
@@ -135,6 +148,16 @@ export default function DataTable({ corner: cornerText, columns, rowLabels, rows
                   </td>
                 );
               })}
+            </tr>
+          ))}
+          {footerRows.map((footer) => (
+            <tr key={footer.label}>
+              <th className={`${rowHead} ${footer.tone === "demand" ? "text-red" : "text-gold"}`}>{footer.label}</th>
+              {footer.values.map((value, j) => (
+                <td key={j} className={`${cell} text-right ${footer.tone === "demand" ? "text-red" : "text-gold"}`}>
+                  {typeof value === "number" ? formatNumber(value) : value}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>

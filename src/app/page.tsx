@@ -24,7 +24,7 @@
 //   - the tab label "Simplex Tableau" is too long for two buttons on a 390px phone,
 //     so below sm it reads "Tableau" (two spans, one is always display: none)
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import AppHeader from "@/components/AppHeader";
 import ControlPanel from "@/components/ControlPanel";
 import EmptyGuide from "@/components/EmptyGuide";
@@ -37,6 +37,7 @@ import type { Options, SolveResponse } from "@/lib/types";
 
 /** the two tabs on the right side of the simulator */
 type Tab = "results" | "tableau";
+const panelLook = "focus-visible:outline-black focus-visible:-outline-offset-2";
 
 /**
  * root page of the app: landing screen first, then the simulator
@@ -84,6 +85,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<Tab>("results");
   const [runId, setRunId] = useState(0); // changes on every solve so the tableau viewer resets
+  const baseId = useId();
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ results: null, tableau: null });
+  const tabId = (tabName: Tab) => `${baseId}-tab-${tabName}`;
+  const panelId = (tabName: Tab) => `${baseId}-panel-${tabName}`;
 
   /**
    * asks the api for the plant groups and the default co2 cap
@@ -160,6 +165,32 @@ export default function Home() {
   // the tableau tab only works when the solver returned tableaus
   const hasTableaus = result?.tableaus && result.tableaus.length > 0;
 
+  function selectTab(next: Tab) {
+    setTab(next);
+    tabRefs.current[next]?.focus();
+  }
+
+  function handleTabKeys(event: KeyboardEvent<HTMLDivElement>) {
+    const enabled: Tab[] = hasTableaus ? ["results", "tableau"] : ["results"];
+    const current = enabled.indexOf(tab);
+    let next: number;
+    if (event.key === "ArrowRight") next = (current + 1) % enabled.length;
+    else if (event.key === "ArrowLeft") next = (current - 1 + enabled.length) % enabled.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = enabled.length - 1;
+    else return;
+    event.preventDefault();
+    selectTab(enabled[next]);
+  }
+
+  function handleRespawn() {
+    if (options) setSelected(options.groups);
+    if (options) setCo2Cap(String(options.defaultCo2Cap));
+    setCo2On(false);
+    setResult(null);
+    setTab("results");
+  }
+
   // title screen first; the choices and results above are kept when going back and forth
   if (!started) return <LandingPage onStart={() => setStarted(true)} />;
 
@@ -196,14 +227,28 @@ export default function Home() {
                 min-w-0 lets this panel shrink inside the grid, so wide content scrolls inside itself */}
             <section className="panel w-full min-w-0 p-4">
               {/* tab buttons share the row equally; the active one turns green */}
-              <div className="mb-4 flex gap-1.5">
+              <div role="tablist" aria-label="Simulation output" className="mb-4 flex gap-1.5" onKeyDown={handleTabKeys}>
                 <button
+                  type="button"
+                  role="tab"
+                  id={tabId("results")}
+                  ref={(element) => { tabRefs.current.results = element; }}
+                  aria-selected={tab === "results"}
+                  aria-controls={panelId("results")}
+                  tabIndex={tab === "results" ? 0 : -1}
                   className={`btn flex-1 ${tab === "results" ? "btn-grass" : ""}`}
                   onClick={() => setTab("results")}
                 >
                   Results
                 </button>
                 <button
+                  type="button"
+                  role="tab"
+                  id={tabId("tableau")}
+                  ref={(element) => { tabRefs.current.tableau = element; }}
+                  aria-selected={tab === "tableau"}
+                  aria-controls={panelId("tableau")}
+                  tabIndex={tab === "tableau" ? 0 : -1}
                   className={`btn flex-1 ${tab === "tableau" ? "btn-grass" : ""}`}
                   onClick={() => setTab("tableau")}
                   disabled={!hasTableaus}
@@ -213,23 +258,16 @@ export default function Home() {
                   <span className="hidden sm:inline">Simplex Tableau</span>
                 </button>
               </div>
-
-              {/* no result yet: show the guide */}
-              {!result && <EmptyGuide />}
-
-              {/* the solve request failed: show the banner with a retry button on the results tab
-                  retry runs the same solve again, and the button says "retrying..." while it waits */}
-              {result?.status === "error" && tab === "results" && (
-                <ErrorBanner
-                  message={result.message ?? "Could not reach the solver API."}
-                  onRetry={handleSolve}
-                  retrying={loading}
-                />
-              )}
-
-              {/* every other result: the results tab or the tableau tab */}
-              {result && result.status !== "error" && tab === "results" && <ResultsTab result={result} />}
-              {result && tab === "tableau" && hasTableaus && <TableauTab key={runId} steps={result.tableaus!} />}
+              <div role="tabpanel" id={panelId("results")} aria-labelledby={tabId("results")} hidden={tab !== "results"} tabIndex={0} className={panelLook}>
+                {!result && <EmptyGuide />}
+                {result?.status === "error" && (
+                  <ErrorBanner message={result.message ?? "Could not reach the solver API."} onRetry={handleSolve} retrying={loading} />
+                )}
+                {result && result.status !== "error" && <ResultsTab result={result} onRespawn={handleRespawn} />}
+              </div>
+              <div role="tabpanel" id={panelId("tableau")} aria-labelledby={tabId("tableau")} hidden={tab !== "tableau"} tabIndex={0} className={panelLook}>
+                {hasTableaus && result?.tableaus && <TableauTab key={runId} steps={result.tableaus} />}
+              </div>
             </section>
           </div>
         )}

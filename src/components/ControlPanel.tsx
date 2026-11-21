@@ -44,6 +44,8 @@ interface Props {
 const slotBase = "slot flex h-full min-h-11 w-full flex-col items-start gap-0.5 p-2 text-left text-ink";
 const slotOff = "hover:bg-slot-hover";                                         // not selected
 const slotOn = "border-4 border-white bg-slot-selected pb-3.5 outline-2 outline-black"; // selected
+const slotFocus = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-black";
+const checkboxFocus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
 
 // sticky panel (task 3.2)
 // - the panel sticks from md up, because below md the layout is one column and sticking makes no sense
@@ -189,7 +191,7 @@ export default function ControlPanel(props: Props) {
               {(describedBy) => (
                 <button
                   type="button"
-                  className={`${slotBase} ${isOn ? slotOn : slotOff}`}
+                  className={`${slotBase} ${isOn ? slotOn : slotOff} ${slotFocus}`}
                   // selected slots get a color bar of the plant type at the bottom
                   style={isOn ? { boxShadow: `inset 0 -8px 0 ${style.color}` } : undefined}
                   aria-pressed={isOn}
@@ -227,7 +229,7 @@ export default function ControlPanel(props: Props) {
       <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
         <input
           type="checkbox"
-          className="size-5 accent-grass-dark"
+          className={`size-5 accent-grass-dark ${checkboxFocus}`}
           checked={props.co2On}
           onChange={(e) => props.onCo2On(e.target.checked)}
         />

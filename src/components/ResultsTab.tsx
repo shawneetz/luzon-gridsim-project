@@ -170,6 +170,7 @@ export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
                 rows={dispatch.values}
                 highlight={fullCapacity}
                 footerRows={footerRows}
+                label="Output of each plant group"
               />
               {/* key for the gold cells, a small gold swatch like the ones in the chart legend */}
               <p className="flex items-center gap-2 text-small text-ink-soft">

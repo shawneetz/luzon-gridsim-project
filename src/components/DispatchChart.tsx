@@ -275,6 +275,40 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
         </div>
       </div>
 
+      <table className="sr-only">
+        <caption>Dispatch in MW per block for each plant group, compared with demand</caption>
+        <thead>
+          <tr>
+            <th scope="col">Plant group</th>
+            {blocks.map((block, t) => (
+              <th key={block} scope="col">{block}{blockHours[t] ? ` ${blockHours[t]}` : ""}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((group, g) => (
+            <tr key={group}>
+              <th scope="row">{group}</th>
+              {blocks.map((block, t) => (
+                <td key={block}>{formatNumber(values[g][t])}</td>
+              ))}
+            </tr>
+          ))}
+          <tr>
+            <th scope="row">Total supply</th>
+            {blocks.map((block, t) => (
+              <td key={block}>{formatNumber(totals[t])}</td>
+            ))}
+          </tr>
+          <tr>
+            <th scope="row">Demand</th>
+            {blocks.map((block, t) => (
+              <td key={block}>{formatNumber(demand[t])}</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+
       {/* legend: color key for the segments, click a group to hide or show it
           it sits outside the scroll box, so it stays in view while the chart scrolls */}
       <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-chart-text">

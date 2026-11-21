@@ -16,8 +16,23 @@
 
 import type { CSSProperties } from "react";
 import { chartInsetPercent } from "@/lib/chartLayout";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, formatPeso } from "@/lib/format";
 import { blockIcons, HOURS_PER_BLOCK } from "@/lib/grid";
+
+type Trend = "above" | "below" | "equal";
+const EQUAL_MARGIN = 0.005;
+const trendMark: Record<Trend, string> = { above: "▲", below: "▼", equal: "=" };
+const trendWords: Record<Trend, string> = {
+  above: "above average",
+  below: "below average",
+  equal: "at average",
+};
+
+function trendOf(price: number, average: number): Trend {
+  const diff = price - average;
+  if (Math.abs(diff) < EQUAL_MARGIN) return "equal";
+  return diff > 0 ? "above" : "below";
+}
 
 /**
  * turns a price into a color between green (cheapest) and red (most expensive)
@@ -60,8 +75,8 @@ function heatColor(price: number, min: number, max: number): string {
  * priceTitle(3800); // "Price = S ÷ h = 15,200 ÷ 4 h = ₱3,800 per MWh"
  * ```
  */
-function priceTitle(price: number): string {
-  return `Price = S ÷ h = ${formatNumber(price * HOURS_PER_BLOCK)} ÷ ${HOURS_PER_BLOCK} h = ₱${formatNumber(price)} per MWh`;
+function priceTitle(price: number, trend: Trend): string {
+  return `Price = S ÷ h = ${formatNumber(price * HOURS_PER_BLOCK)} ÷ ${HOURS_PER_BLOCK} h = ₱${formatNumber(price)} per MWh (${trendWords[trend]})`;
 }
 
 // the gaps of the chart as percentages, worked out once when the file loads
@@ -122,6 +137,9 @@ export default function PriceRow({ blocks, values }: PriceRowProps) {
   // range of the prices, used to color the slots
   const minPrice = Math.min(...values);
   const maxPrice = Math.max(...values);
+  const average = values.length > 0
+    ? values.reduce((sum, price) => sum + price, 0) / values.length
+    : 0;
 
   return (
     // outer box: same inset as the chart box, so its content is as wide as the svg (xl only)
@@ -131,24 +149,34 @@ export default function PriceRow({ blocks, values }: PriceRowProps) {
         className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-(--price-cols) xl:gap-0 xl:pl-(--price-left) xl:pr-(--price-right)"
         style={{ ...gridVars, "--price-cols": `repeat(${blocks.length}, minmax(0, 1fr))` } as CSSProperties}
       >
-        {blocks.map((block, t) => (
+        {blocks.map((block, t) => {
+          const trend = trendOf(values[t], average);
+          return (
           // .slot comes from the shared looks, cursor-default because a price slot is not clickable
           // xl:mx-1 makes the gap between slots (the grid gap is 0 there, so columns match the chart slots)
           <div
             key={block}
-            title={priceTitle(values[t])}
+            title={priceTitle(values[t], trend)}
             className="slot cursor-default p-2 text-center xl:mx-1 xl:px-1"
           >
             <div className="font-pixel text-pixel-label text-ink">
-              {blockIcons[t]} {block}
+              {blockIcons[t]} {block}{" "}
+              <span aria-hidden="true">{trendMark[trend]}</span>
+              <span className="sr-only">{trendWords[trend]}</span>
             </div>
             {/* the price sits on a dark plate, colored green (cheap) to red (expensive) */}
             <div className="mt-1.5 bg-screen px-1 py-0.5 text-price" style={{ color: heatColor(values[t], minPrice, maxPrice) }}>
               {values[t].toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
+      {values.length > 0 && (
+        <p className="mt-2 text-small text-ink-soft">
+          ▲ above average · ▼ below average · = at average · average {formatPeso(average)} per MWh
+        </p>
+      )}
     </div>
   );
 }

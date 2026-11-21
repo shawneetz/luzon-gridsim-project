@@ -131,6 +131,7 @@ export default function TableauTab({ steps }: { steps: TableauStep[] }) {
         rowLabels={[...step.rowNames, "Basic solution"]}
         rows={[...step.values, basicRow]}
         highlight={pivotOf(step)}
+        label="Simplex tableau"
       />
     </div>
   );

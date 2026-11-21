@@ -168,6 +168,11 @@
     image-rendering: pixelated;
   }
 
+  :focus-visible {
+    outline: 3px solid var(--color-panel-light);
+    outline-offset: 0;
+  }
+
   /* reduced motion: people who ask their system for less motion get no animation at all
      we use "animation: none" instead of a very short duration on purpose,
      because a short duration would freeze a cloud at the END of its drift (off screen),
@@ -235,7 +240,7 @@
      min-h-11 (44px) so the tableau dropdown and the co2 box are easy to tap */
   .field-input {
     @apply min-h-11 rounded-none border-2 border-panel-dark bg-black px-2.5 py-1.5 font-body text-input text-white;
-    @apply focus:border-white focus:outline-none disabled:opacity-50;
+    @apply focus:border-white disabled:opacity-50;
   }
 
   /* message box at the top of the results (success, warning, death) */
