@@ -1,18 +1,19 @@
 /*
-  globals.css
   the only css file in the app. it has four parts:
     1) @theme      design tokens (colors, fonts, sizes, shadows, animations). each
                    token becomes a tailwind class, e.g. --color-gold -> text-gold, bg-gold
     2) @utility    small custom classes for the hard pixel text shadows
-    3) base        page background and the reduced motion rule
+    3) base        page background, the focus ring and the reduced motion rule
     4) components  looks that are reused in many places (btn, panel, slot, screen, ...)
   layout and one-off styling (grid, flex, spacing, widths, backgrounds) is NOT here
   it is written as tailwind classes directly in the .tsx files, so you change it
   where you see it
 
-  new in this version (task 6.1, responsive pass):
-    - .btn and .field-input are at least 44px tall (min-h-11), so every button,
-      tab, dropdown and text box is an easy touch target
+  cleanup (task 6.4):
+    - every token below is used by a component, the unused bob animation was removed
+    - before adding a token, check it is used, and before removing one, search for
+      its class name in src/ (for example bg-xp or animate-twinkle)
+    - every animate-* token must also be in the reduced motion list in part 3
 */
 @import "tailwindcss";
 
@@ -62,11 +63,11 @@
   --color-row-hover: #2f3b2f;     /* table row on hover */
   --color-dim: #555555;           /* zeros in tables */
 
-  /* new tokens for the revamp (not used by any component yet) */
+  /* tooltip, iteration navigator and landing scenery colors */
   --color-tooltip-bg: #100010;      /* item tooltip background, near black purple */
   --color-tooltip-border: #2d0a63;  /* item tooltip frame, dark purple */
-  --color-xp: #7efc20;              /* xp bar fill (iteration navigator) */
-  --color-hotbar: #373737;          /* hotbar and xp bar background */
+  --color-xp: #7efc20;              /* xp bar fill (iteration navigator, task 5.2) */
+  --color-hotbar: #373737;          /* hotbar and xp bar background (task 5.2) */
   --color-sky-top: #5aa0e8;         /* day sky, top of the gradient */
   --color-sky-bottom: #bfe0ff;      /* day sky, near the horizon */
   --color-sky-night-top: #0a0f2c;   /* night sky, top of the gradient */
@@ -132,16 +133,9 @@
     to { transform: translateX(130vw); }
   }
 
-  /* bob: a small up and down float, for item icons and the splash-like hints
-     use as animate-bob. the steps() timing keeps the movement chunky like pixel art */
-  --animate-bob: bob 1.2s steps(4, jump-none) infinite alternate;
-  @keyframes bob {
-    from { transform: translateY(0); }
-    to { transform: translateY(-6px); }
-  }
-
   /* twinkle: stars that fade in and out, use as animate-twinkle
-     set a different [animation-delay:...] on each star so they do not blink together */
+     set a different [animation-delay:...] on each star so they do not blink together
+     the mining bar on the solve button uses it too */
   --animate-twinkle: twinkle 2s ease-in-out infinite alternate;
   @keyframes twinkle {
     from { opacity: 1; }
@@ -168,6 +162,14 @@
     image-rendering: pixelated;
   }
 
+  /* focus ring (task 6.2): a square white outline with no blur, like a selected slot in game
+     - :focus-visible (not :focus) so it shows for the keyboard, but not after a mouse click
+     - offset 0 draws the ring right against the black border of buttons and slots, so the
+       white always touches black, which stays easy to see even on the light gray panels
+     - elements with their own look (the plant slots, the checkbox, the tab panel, the chart
+       scroll box) override the color or the offset with a focus-visible: class in their tsx file
+       because white on light gray has weak contrast
+     - this rule sits in the base layer, so any tailwind outline class on an element wins over it */
   :focus-visible {
     outline: 3px solid var(--color-panel-light);
     outline-offset: 0;
@@ -182,7 +184,6 @@
     .animate-shake,
     .animate-splash,
     .animate-drift,
-    .animate-bob,
     .animate-twinkle {
       animation: none;
     }
@@ -237,7 +238,9 @@
   }
 
   /* black text input and dropdown, like the in-game text fields
-     min-h-11 (44px) so the tableau dropdown and the co2 box are easy to tap */
+     min-h-11 so the tableau dropdown and the co2 box are easy to tap
+     the outline is NOT removed on focus (task 6.2), the global focus ring shows,
+     and the border still turns white while the field has focus */
   .field-input {
     @apply min-h-11 rounded-none border-2 border-panel-dark bg-black px-2.5 py-1.5 font-body text-input text-white;
     @apply focus:border-white disabled:opacity-50;
@@ -248,3 +251,16 @@
     @apply border-4 border-panel-dark bg-black px-4 py-3.5 text-large text-white;
   }
 }
+
+/*
+  references:
+  tailwind css v4, theme variables (@theme): https://tailwindcss.com/docs/theme
+  tailwind css v4, functions and directives (@utility, @layer, @apply): https://tailwindcss.com/docs/functions-and-directives
+  tailwind css v4, outline: https://tailwindcss.com/docs/outline-width
+  mdn, :focus-visible: https://developer.mozilla.org/en-US/docs/Web/CSS/:focus-visible
+  mdn, outline: https://developer.mozilla.org/en-US/docs/Web/CSS/outline
+  mdn, prefers-reduced-motion: https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion
+  mdn, css keyframes: https://developer.mozilla.org/en-US/docs/Web/CSS/@keyframes
+  w3c wcag 2.2, focus visible, 2.4.7: https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html
+  w3c wcag 2.2, non-text contrast, 1.4.11: https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html
+*/

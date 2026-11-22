@@ -1,10 +1,9 @@
 "use client";
 
-// LandingPage.tsx
 // the title screen, like the minecraft home menu. it shows the game logo,
 // a bouncing splash text, a narrow column of menu buttons, and a footer
-// it holds two bits of state (the player's day or night choice, and which
-// element is the info dialog); everything else comes in through props
+// it holds one bit of state (the player's day or night override) and a ref to the
+// info dialog; everything else comes in through props
 //
 // styling: everything is tailwind classes written in this file
 // the only things that live in globals.css are the shared looks

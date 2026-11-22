@@ -1,0 +1,26 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" shape-rendering="crispEdges">
+  <!-- base: dirt everywhere, the rows below paint over it -->
+  <rect width="8" height="8" fill="#6b4a2f"/>
+
+  <!-- rows 0 and 1: grass, row 1 has three dark grass specks -->
+  <rect y="0" width="8" height="2" fill="#5fa83a"/>
+  <rect x="1" y="1" width="1" height="1" fill="#3f7a24"/>
+  <rect x="4" y="1" width="1" height="1" fill="#3f7a24"/>
+  <rect x="7" y="1" width="1" height="1" fill="#3f7a24"/>
+
+  <!-- dark dirt specks, rows 2 to 7 -->
+  <rect x="2" y="2" width="1" height="1" fill="#5a3d26"/>
+  <rect x="6" y="2" width="1" height="1" fill="#5a3d26"/>
+  <rect x="1" y="3" width="1" height="1" fill="#5a3d26"/>
+  <rect x="3" y="4" width="1" height="1" fill="#5a3d26"/>
+  <rect x="6" y="4" width="1" height="1" fill="#5a3d26"/>
+  <rect x="0" y="5" width="1" height="1" fill="#5a3d26"/>
+  <rect x="2" y="6" width="1" height="1" fill="#5a3d26"/>
+  <rect x="7" y="6" width="1" height="1" fill="#5a3d26"/>
+  <rect x="4" y="7" width="1" height="1" fill="#5a3d26"/>
+
+  <!-- light soil specks -->
+  <rect x="4" y="3" width="1" height="1" fill="#7a5230"/>
+  <rect x="5" y="5" width="1" height="1" fill="#7a5230"/>
+</svg>

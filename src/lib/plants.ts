@@ -6,6 +6,7 @@
 // bundles them and gives each one the right url (no manual paths, no base path)
 // a wrong file name here shows up as a "module not found" error at build time
 //
+// note: the time of day icons (blockIcons) live in lib/grid.ts, import them from there
 
 import coal from "@/assets/minecraft-coal.webp";
 import fire from "@/assets/minecraft-fire.webp";
@@ -14,10 +15,6 @@ import water from "@/assets/minecraft-water.webp";
 import barrel from "@/assets/minecraft-barrel.webp";
 import sun from "@/assets/minecraft-sun.webp";
 import wind from "@/assets/minecraft-wind.webp";
-
-// blockIcons moved to lib/grid.ts; re-exported here so existing imports
-// (like ResultsTab) keep working until they are updated in a later task
-export { blockIcons } from "./grid";
 
 /** how one plant group looks and what it is, in the ui */
 export interface PlantStyle {
@@ -119,6 +116,5 @@ export function styleOf(group: string): PlantStyle {
 // references:
 // next.js, static image imports: https://nextjs.org/docs/app/getting-started/images
 // typescript, record type: https://www.typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type
-// typescript re-exports (export { x } from): https://www.typescriptlang.org/docs/handbook/modules/reference.html
 // cmsc 150 final project spec, table 1 (plant groups, capacities, emission factors and notes)
 // tsdoc standard: https://tsdoc.org
