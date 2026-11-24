@@ -1,20 +1,24 @@
 # Luzon GridSim
 
-Luzon GridSim finds the cheapest way to run the Luzon grid for one day. Pick the power plant groups, optionally set a daily CO₂ limit, then press **Solve**. It is a CMSC 150 final project: the solver is written by hand with the simplex method (minimization through the dual), with no optimization library.
+by Shawn Alfred Padilla, UPLB BSCS batch 2025
 
-The project has two parts:
+Luzon GridSim finds the cheapest way to run the Luzon power grid for one day. Pick the plant groups, optionally set a daily CO₂ limit, then press **Solve**.
 
-- the **R API** (`api/`) solves the problem
-- the **Next.js web app** (`src/`) takes the choices and shows the results
+It is a CMSC 150 final project. The solver is written by hand with the simplex method (minimization through the dual), with no optimization library.
 
-Plant data and limits live in `api/R/data.R`. There is no spreadsheet or csv to load.
+## Parts
 
-## What you need
+- **R API** (`api/`) solves the problem
+- **Next.js web app** (`src/`) takes the choices and shows the results
+
+All plant data and limits live in `api/R/data.R`. There is no csv or spreadsheet to load.
+
+## Requirements
 
 - [R](https://www.r-project.org/)
-- [Node.js](https://nodejs.org/)
+- [Node.js](https://nodejs.org/) 20.9 or newer
 
-## Set up
+## Setup
 
 Open a terminal in the `next-app` folder.
 
@@ -25,7 +29,7 @@ npm install
 
 ## Run
 
-Keep both parts running in separate terminals, both started from the `next-app` folder.
+Keep both parts running in two terminals, both started from `next-app`.
 
 **Terminal 1, the solver** (runs at `http://localhost:8000`):
 
@@ -42,30 +46,34 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-To use a different api address, copy `.env.example` to `.env.local`, change `API_URL`, and restart the web app.
+To use another solver address, create `.env.local` with `API_URL=http://your-address` and restart the web app.
 
-## How to use it
+## How to use
 
-1. press **Start Simulation** on the title screen
+1. press **Start Simulation**
 2. click plant slots to select them (**Check All** and **Reset** help)
-3. optionally switch on **Limit daily CO₂** and type a limit in t/day
+3. optionally turn on **Limit daily CO₂** and type a limit in t/day
 4. press **Solve**
-5. read the **Results** tab, then step through every iteration in the **Simplex Tableau** tab
+5. read the **Results** tab, then step through each iteration in the **Simplex Tableau** tab
 
-Price of electricity per block = shadow price `S` of that block's demand constraint, divided by 4 hours.
+The price of electricity in a block is the shadow price `S` of that block's demand constraint divided by 4 hours.
 
-## Design
+## Troubleshooting
 
-The look is a pixel, Minecraft-style interface (not affiliated with Mojang or Microsoft). Plant groups are inventory slots, the iteration navigator is an xp bar, and an infeasible problem shows "You Died!".
+| problem | fix |
+| --- | --- |
+| page says it cannot reach the solver | start Terminal 1 (the R API) |
+| browser cannot open the page | start Terminal 2 (the web app) |
+| the solver cannot find its files | run the commands from the `next-app` folder as shown |
 
-- design tokens (colors, fonts, sizes, shadows, animations): `src/app/globals.css`
-- the ui revamp plan and every design decision: [TASKS.md](./TASKS.md)
-- why we built it this way, for the demo: [PRESENTATION-NOTES.md](./PRESENTATION-NOTES.md)
-- how each part of the code works: [TECHNICAL-DOCS.md](./TECHNICAL-DOCS.md)
-- how data moves from the model to the page: [DATA-PIPELINE.md](./DATA-PIPELINE.md)
+## More docs
 
-## If something does not work
+- [DATA-PIPELINE.md](./DATA-PIPELINE.md) shows how data moves from the model to the page
 
-- the page says it cannot reach the solver: Terminal 1 (the R API) is not running
-- the browser cannot open the page: Terminal 2 (the web app) is not running
-- start both commands from the `next-app` folder as shown above
+The look is a pixel, Minecraft-style interface (not affiliated with Mojang or Microsoft). Design tokens live in `src/app/globals.css`.
+
+## References
+
+- Next.js, getting started: https://nextjs.org/docs/app/getting-started
+- Plumber, R web APIs: https://www.rplumber.io
+- Next.js, environment variables: https://nextjs.org/docs/app/guides/environment-variables
