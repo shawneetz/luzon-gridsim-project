@@ -5,7 +5,7 @@
 //   1b) help     only when infeasible: why it may happen, and a respawn button
 //   2) dispatch  DispatchChart at full width, with PriceRow directly under it
 //   3) numbers   DataTable (output of each plant group, with totals and demand)
-//                beside KeyInsights
+//                beside KeyInsights (below 2xl only, see the 2xl note)
 // the pieces own their own styling, this file only owns the order and the panels
 //
 // layout (edit the tailwind classes below):
@@ -14,6 +14,11 @@
 //   numbers row: one column on small screens, two cards from xl up, the table
 //   gets 3 parts and the insights get 2 (xl:grid-cols-[3fr_2fr])
 //   every section is a .panel with a .heading, see the shared looks in the global stylesheet
+//
+// 2xl note (right rail):
+//   from 2xl up the page shows the key insights in their own column on the far right
+//   (see page.tsx), so here the insights card is hidden and the table takes the full width
+//   below 2xl the card stays here, beside the table, like before
 
 import type { ReactNode } from "react";
 import DataTable, { type FooterRow } from "./DataTable";
@@ -33,6 +38,8 @@ interface SectionProps {
   title: string;
   /** what goes inside the panel, spaced evenly in a column */
   children: ReactNode;
+  /** extra tailwind classes for the panel, e.g. "2xl:hidden" (default: none) */
+  className?: string;
 }
 
 /**
@@ -45,15 +52,18 @@ interface SectionProps {
  * `aria-label` names the region for screen readers, so they can jump between sections
  * `min-w-0` lets the panel shrink inside a grid column, so a wide table scrolls
  * inside its own box instead of pushing the page wider
+ * `className` is added at the end, so a visibility class like `2xl:hidden` can switch the
+ * whole panel off at one width, a hidden panel is skipped by screen readers too
  *
  * @example
  * ```tsx
  * <Section title="Summary">...</Section>
+ * <Section title="Key insights" className="2xl:hidden">...</Section>
  * ```
  */
-function Section({ title, children }: SectionProps) {
+function Section({ title, children, className = "" }: SectionProps) {
   return (
-    <section aria-label={title} className="panel min-w-0 p-4">
+    <section aria-label={title} className={`panel min-w-0 p-4 ${className}`}>
       <h2 className="heading">{title}</h2>
       <div className="flex flex-col gap-3.5">{children}</div>
     </section>
@@ -103,6 +113,14 @@ interface ResultsTabProps {
  * - `items-start` on the numbers row keeps the shorter card from stretching to the height of the taller one
  * - at xl the stat boxes are tight (about 620px for 5 columns), if the cost wraps,
  *   make the banner narrower (`xl:w-52`) or move the row breakpoint to `2xl:`
+ *
+ * right rail (2xl):
+ * - the key insights card is rendered here and in the page rail, and each one is hidden
+ *   at the width where the other shows (`2xl:hidden` here, `hidden 2xl:block` in the page),
+ *   so only one is ever visible and a hidden one is `display: none`
+ * - the numbers row goes back to one column at 2xl (`2xl:grid-cols-1`), because the
+ *   table is then the only card in it, a leftover 3fr and 2fr split would waste space
+ * - if the rail is ever removed from the page, remove both 2xl classes here as well
  *
  * @example
  * ```tsx
@@ -160,8 +178,9 @@ export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
             <PriceRow blocks={prices.blocks} values={prices.values} />
           </Section>
 
-          {/* section 3: two cards side by side from xl up, the table and the key insights */}
-          <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          {/* section 3: two cards side by side from xl up, the table and the key insights
+              from 2xl up the insights move to the page rail, so the table gets the full width */}
+          <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:grid-cols-1">
             <Section title="Output of each plant group (MW)">
               <DataTable
                 corner="Plant group"
@@ -178,7 +197,8 @@ export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
                 Gold cell = plant group at full capacity
               </p>
             </Section>
-            <Section title="Key insights">
+            {/* hidden at 2xl, the page shows the same card in the right rail there */}
+            <Section title="Key insights" className="2xl:hidden">
               <KeyInsights dispatch={dispatch} prices={prices} />
             </Section>
           </div>
@@ -196,10 +216,12 @@ export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
 // typescript, narrowing: https://www.typescriptlang.org/docs/handbook/2/narrowing.html
 // typescript, importing types inline (import { type X }): https://www.typescriptlang.org/docs/handbook/modules/reference.html#type-modifiers-on-import-names
 // mdn, array.prototype.slice: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice
+// mdn, aria-label: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-label
 // tailwind css v4, grid template columns: https://tailwindcss.com/docs/grid-template-columns
 // tailwind css v4, align items: https://tailwindcss.com/docs/align-items
 // tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
+// tailwind css v4, display (hidden): https://tailwindcss.com/docs/display
+// tailwind css v4, responsive design (2xl breakpoint): https://tailwindcss.com/docs/responsive-design
 // tailwind css v4, styling direct children (*: variant): https://tailwindcss.com/docs/hover-focus-and-other-states#styling-direct-children
-// mdn, aria-label: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-label
 // cmsc 150 final project spec, failure cases (infeasible problems), table 1 (plant capacities) and table 2 (demand)
 // tsdoc standard: https://tsdoc.org

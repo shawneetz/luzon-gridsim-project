@@ -1,79 +1,71 @@
 # Luzon GridSim
 
-Luzon GridSim helps find a low-cost way to meet electricity demand using different power-plant groups. Choose the groups, optionally set a daily CO₂ limit, and select **Solve** to see the plan.
+Luzon GridSim finds the cheapest way to run the Luzon grid for one day. Pick the power plant groups, optionally set a daily CO₂ limit, then press **Solve**. It is a CMSC 150 final project: the solver is written by hand with the simplex method (minimization through the dual), with no optimization library.
 
 The project has two parts:
 
-- The **R API** calculates the plan.
-- The **Next.js web app** lets you enter choices and view the results.
+- the **R API** (`api/`) solves the problem
+- the **Next.js web app** (`src/`) takes the choices and shows the results
 
-Plant data and limits are written in `api/R/data.R`. The solver does not load them from a spreadsheet or CSV file.
+Plant data and limits live in `api/R/data.R`. There is no spreadsheet or csv to load.
 
 ## What you need
-
-Install these tools before you start:
 
 - [R](https://www.r-project.org/)
 - [Node.js](https://nodejs.org/)
 
-## Set up the project
+## Set up
 
 Open a terminal in the `next-app` folder.
 
-Install the R packages once:
-
 ```bash
 Rscript -e 'install.packages(c("plumber", "jsonlite"))'
-```
-
-Install the web app packages:
-
-```bash
 npm install
 ```
 
-## Start the project
+## Run
 
-Keep both parts running in separate terminals.
+Keep both parts running in separate terminals, both started from the `next-app` folder.
 
-### Terminal 1: Start the solver
-
-From the `next-app` folder, run:
+**Terminal 1, the solver** (runs at `http://localhost:8000`):
 
 ```bash
 cd api
 Rscript run_api.R
 ```
 
-The API starts at `http://localhost:8000`.
-
-### Terminal 2: Start the web app
-
-From the `next-app` folder, run:
+**Terminal 2, the web app:**
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Change the API address
+To use a different api address, copy `.env.example` to `.env.local`, change `API_URL`, and restart the web app.
 
-The web app sends requests to `http://localhost:8000` by default. To use a different address, copy `.env.example` to `.env.local` and change the `API_URL` value. Restart the web app after changing it.
+## How to use it
 
-## Where to look in the code
+1. press **Start Simulation** on the title screen
+2. click plant slots to select them (**Check All** and **Reset** help)
+3. optionally switch on **Limit daily CO₂** and type a limit in t/day
+4. press **Solve**
+5. read the **Results** tab, then step through every iteration in the **Simplex Tableau** tab
 
-- `api/R/data.R` contains the plant data and limits.
-- `api/R/` contains the functions that check inputs and calculate the plan.
-- `api/plumber.R` provides the API endpoints.
-- `src/app/` contains the main web page.
-- `src/components/` contains the controls, results, and tables.
-- `src/lib/` contains API request helpers, data types, and number formatting.
+Price of electricity per block = shadow price `S` of that block's demand constraint, divided by 4 hours.
 
-For a step-by-step explanation of how data moves from the model to the web page, see [DATA-PIPELINE.md](./DATA-PIPELINE.md).
+## Design
+
+The look is a pixel, Minecraft-style interface (not affiliated with Mojang or Microsoft). Plant groups are inventory slots, the iteration navigator is an xp bar, and an infeasible problem shows "You Died!".
+
+- design tokens (colors, fonts, sizes, shadows, animations): `src/app/globals.css`
+- the ui revamp plan and every design decision: [TASKS.md](./TASKS.md)
+- why we built it this way, for the demo: [PRESENTATION-NOTES.md](./PRESENTATION-NOTES.md)
+- how each part of the code works: [TECHNICAL-DOCS.md](./TECHNICAL-DOCS.md)
+- how data moves from the model to the page: [DATA-PIPELINE.md](./DATA-PIPELINE.md)
 
 ## If something does not work
 
-- If the page says it cannot reach the solver, make sure Terminal 1 is still running the R API.
-- If the browser cannot open the page, make sure Terminal 2 is still running the web app.
-- Check that you started both commands from the `next-app` folder as shown above.
+- the page says it cannot reach the solver: Terminal 1 (the R API) is not running
+- the browser cannot open the page: Terminal 2 (the web app) is not running
+- start both commands from the `next-app` folder as shown above

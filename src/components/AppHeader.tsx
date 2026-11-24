@@ -5,12 +5,16 @@
 //
 // layout (edit the tailwind classes below):
 //   outer <header>  full width, so the grass reaches both screen edges
-//   inner wrapper   capped at 1320px like the content below, one flex row:
+//   inner wrapper   capped at 1320px (1800px from 2xl) like the content below, one flex row:
 //                   logo and title on the left, button group on the right
 //                   on small screens the row wraps and the buttons drop under the title
 //   sticky          only when the window is at least 768px wide AND 800px tall,
 //                   see the remarks on the component for why
 //   title size      1.25rem on phones, the full 1.9rem token from sm up (task 6.1)
+//
+// width note:
+//   the two max widths must match the content wrapper in page.tsx, otherwise the logo and
+//   the buttons would not line up with the columns below, change both files together
 
 /** props for the {@link AppHeader} component */
 interface AppHeaderProps {
@@ -105,6 +109,11 @@ function DirtBlockIcon() {
  *   a 390px phone, so below sm it is 1.25rem (about 260px, with the icon it fits)
  * - from sm up the normal `text-pixel-title` token is used again
  *
+ * wide screen decision (right rail):
+ * - from 2xl (1536px) the inner wrapper grows from 1320px to 1800px, the same as the
+ *   content in page.tsx, so the page has room for the third column (key insights)
+ *   and the logo and the buttons stay lined up with the outer edges of the columns
+ *
  * edge cases:
  * - `flex-wrap` lets the button group drop under the title on phones,
  *   `ml-auto` keeps it on the right when it wraps
@@ -122,14 +131,14 @@ function DirtBlockIcon() {
  *
  * @example
  * ```tsx
- * <AppHeader onMainMenu={() => setStarted(false)} />
+ * <AppHeader onMainMenu={() => setStarted(false)} soundOn={soundOn} onToggleSound={toggleSound} />
  * ```
  */
 export default function AppHeader({ onMainMenu, soundOn, onToggleSound }: AppHeaderProps) {
   return (
     // z-40 keeps the sticky header above the tables and the chart while scrolling
     <header className={`grass-strip z-40 mb-6 border-b-4 border-black px-4 pb-5 pt-7 ${stickyOnTall}`}>
-      <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center justify-between gap-x-4 gap-y-3">
+      <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center justify-between gap-x-4 gap-y-3 2xl:max-w-[1800px]">
         {/* left: logo and title block */}
         <div className="flex items-center gap-4">
           <DirtBlockIcon />
@@ -160,7 +169,8 @@ export default function AppHeader({ onMainMenu, soundOn, onToggleSound }: AppHea
 // references:
 // tailwind css, arbitrary variants (media query in square brackets): https://tailwindcss.com/docs/hover-focus-and-other-states#using-arbitrary-variants
 // tailwind css v4, arbitrary values (text-[1.25rem]): https://tailwindcss.com/docs/adding-custom-styles#using-arbitrary-values
-// tailwind css v4, responsive design (sm: breakpoint): https://tailwindcss.com/docs/responsive-design
+// tailwind css v4, responsive design (sm: and 2xl: breakpoints): https://tailwindcss.com/docs/responsive-design
+// tailwind css v4, max-width: https://tailwindcss.com/docs/max-width
 // tailwind css, position (sticky): https://tailwindcss.com/docs/position
 // mdn, position: sticky: https://developer.mozilla.org/en-US/docs/Web/CSS/position
 // mdn, height media feature: https://developer.mozilla.org/en-US/docs/Web/CSS/@media/height
