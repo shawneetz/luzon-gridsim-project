@@ -11,7 +11,7 @@
 //   home or end          first or last step
 //
 // layout (edit the tailwind classes below):
-//   bar height: h-7 (28px), tall enough to read the label and to tap on a phone
+//   bar height: h-11 (44px), the minimum touch target size, it was h-7 (28px) before
 //   the fill is the only element with a dynamic width, so its width is an inline style
 //   the notches are thin black lines, one between every two steps
 
@@ -30,9 +30,10 @@ interface XpBarProps {
 }
 
 // bar frame: hotbar gray with a black border and the same focus ring as the other controls
+// h-11 (44px) because the bar is a click target, see wcag target size
 // cursor-pointer because a click on the bar jumps to that step
 const frame =
-  "relative h-7 w-full cursor-pointer border-2 border-black bg-hotbar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
+  "relative h-11 w-full cursor-pointer border-2 border-black bg-hotbar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
 
 // green fill with a lighter top edge, like the lit part of the in-game bar
 // the width animates a little, and motion-reduce makes it instant for people who ask for less motion
@@ -79,6 +80,8 @@ function clamp(n: number, max: number): number {
  *   and the arrow keys do not scroll the page only while the strip is focused
  * - `aria-valuetext` carries the label, so screen readers say "Iteration 3 of 12"
  *   and not just the raw number
+ * - the taller bar only changes the frame, the click math uses the width, so
+ *   nothing else needs to change
  *
  * @example
  * ```tsx
@@ -143,6 +146,7 @@ export default function XpBar({ value, max, label, ariaLabel, onChange }: XpBarP
 
 // references:
 // wai-aria authoring practices, slider pattern: https://www.w3.org/WAI/ARIA/apg/patterns/slider/
+// w3c wcag 2.2, target size (minimum), 2.5.8: https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
 // mdn, slider role: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/slider_role
 // mdn, aria-valuetext: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-valuetext
 // mdn, keyboardevent.key values: https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values
@@ -151,6 +155,7 @@ export default function XpBar({ value, max, label, ariaLabel, onChange }: XpBarP
 // react, responding to events: https://react.dev/learn/responding-to-events
 // react, rendering lists (keys): https://react.dev/learn/rendering-lists
 // react, typescript with events (KeyboardEvent, MouseEvent): https://react.dev/learn/typescript#typing-events
+// tailwind css v4, height: https://tailwindcss.com/docs/height
 // tailwind css v4, transition-property: https://tailwindcss.com/docs/transition-property
 // tailwind css v4, outline: https://tailwindcss.com/docs/outline
 // tailwind css v4, hover, focus and other states (focus-visible): https://tailwindcss.com/docs/hover-focus-and-other-states

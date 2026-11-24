@@ -11,10 +11,17 @@
 // layout (edit the tailwind classes below):
 //   plant slots are a 2 column grid, change grid-cols-2 for more or fewer columns
 //   if you change the column count, also change how `align` is picked for the tooltip
-//   image size is the size-10 class on the <img> (40px), change it to resize all icons
+//   image size is the size-12 class on the <img> (48px), change it to resize all icons
 //   sticky: from md up the panel sticks while the results scroll, see `stickyPanel`
 //   touch targets (task 6.1): every slot is taller than 44px, buttons get min-h-11 from
 //   .btn, and the co2 checkbox row has min-h-11 so the whole row is the tap area
+//
+// size refinement (after task 6.4):
+//   - check all and reset share the row equally (flex-1), so each one is a wide target
+//   - the solve button uses text-pixel-sub (0.75rem) like the landing menu buttons,
+//     the old text-base (1rem) was far bigger than every other pixel font label
+//   - the slot tag uses text-pixel-label (0.65rem), the old 0.5rem was too small to read
+//   - the checkbox is size-6 (24px), the row around it is still the 44px tap area
 
 import { useId } from "react";
 import MiningBar from "./MiningBar";
@@ -39,7 +46,7 @@ interface Props {
 
 // look of a plant slot. "slot" (from globals.css) gives the gray bevel
 // h-full w-full makes the button fill the tooltip wrapper, which fills the grid cell
-// min-h-11 is a safety net: a slot is already about 100px tall, but this keeps the
+// min-h-11 is a safety net: a slot is already about 110px tall, but this keeps the
 // 44px touch rule true even if the content gets smaller later
 const slotBase = "slot flex h-full min-h-11 w-full flex-col items-start gap-0.5 p-2 text-left text-ink";
 const slotOff = "hover:bg-slot-hover";                                         // not selected
@@ -121,8 +128,10 @@ function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
  *   the bar ("Mining...") is the text they read
  *
  * touch targets (task 6.1):
- * - the checkbox itself is only 20px, so its label row is at least 44px tall
+ * - the checkbox itself is only 24px, so its label row is at least 44px tall
  *   (`min-h-11`) and the whole row toggles the box, not just the tiny square
+ * - check all and reset use `flex-1`, so they split the row and never sit as two
+ *   small buttons with empty space next to them
  *
  * edge cases:
  * - the selection count uses `groups.length` as the total, so it stays right
@@ -135,6 +144,8 @@ function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
  *   anchored under its slot and to the left or right edge by column, to stay inside the panel
  * - while `loading` is true the button is also disabled, and the hint stays hidden
  *   so the two states do not stack
+ * - the solve button text size is a utility class on the element, it wins over the
+ *   `.btn` size from the components layer
  *
  * @example
  * ```tsx
@@ -165,12 +176,12 @@ export default function ControlPanel(props: Props) {
         </span>
       </div>
 
-      {/* quick select buttons */}
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn" onClick={props.onCheckAll}>
+      {/* quick select buttons, flex-1 splits the row evenly */}
+      <div className="flex gap-2">
+        <button type="button" className="btn flex-1" onClick={props.onCheckAll}>
           Check All
         </button>
-        <button type="button" className="btn" onClick={props.onReset}>
+        <button type="button" className="btn flex-1" onClick={props.onReset}>
           Reset
         </button>
       </div>
@@ -198,17 +209,18 @@ export default function ControlPanel(props: Props) {
                   aria-describedby={describedBy}
                   onClick={() => props.onToggleGroup(group)}
                 >
-                  {/* fixed 40px box: object-contain fits any image size without stretching,
+                  {/* fixed 48px box: object-contain fits any image size without stretching,
                       pixelated keeps pixel art sharp. plain <img> keeps this simple,
                       so the next/image lint rule is switched off for this line */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={style.image}
                     alt=""
-                    className="size-10 object-contain [image-rendering:pixelated]"
+                    className="size-12 object-contain [image-rendering:pixelated]"
                   />
                   <span className="font-body text-input leading-none">{group}</span>
-                  <span className="font-pixel text-pixel-tiny text-ink-soft">{style.tag}</span>
+                  {/* text-pixel-label (0.65rem) is the smallest size that is still easy to read */}
+                  <span className="font-pixel text-pixel-label text-ink-soft">{style.tag}</span>
 
                   {/* capacity hint, only for groups that have a known capacity */}
                   {style.capMw > 0 && (
@@ -225,11 +237,11 @@ export default function ControlPanel(props: Props) {
 
       {/* co2 cap: the limit box is disabled until the toggle is on */}
       <h2 className="heading">CO₂ cap</h2>
-      {/* min-h-11 makes the whole row a 44px tap area for the small checkbox */}
+      {/* min-h-11 makes the whole row a 44px tap area for the checkbox */}
       <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
         <input
           type="checkbox"
-          className={`size-5 accent-grass-dark ${checkboxFocus}`}
+          className={`size-6 accent-grass-dark ${checkboxFocus}`}
           checked={props.co2On}
           onChange={(e) => props.onCo2On(e.target.checked)}
         />
@@ -258,10 +270,11 @@ export default function ControlPanel(props: Props) {
       )}
 
       {/* big green solve button: disabled while loading or while an input is bad
-          while loading it shows the mining bar instead of the word "Solve" */}
+          while loading it shows the mining bar instead of the word "Solve"
+          text-pixel-sub matches the landing menu buttons */}
       <button
         type="button"
-        className="btn btn-grass mt-5 w-full py-4 text-base"
+        className="btn btn-grass mt-5 w-full py-4 text-pixel-sub"
         onClick={props.onSolve}
         disabled={props.loading || solveBlocked}
         aria-busy={props.loading}
@@ -290,6 +303,8 @@ export default function ControlPanel(props: Props) {
 // tailwind css v4, max-height: https://tailwindcss.com/docs/max-height
 // tailwind css v4, min-height: https://tailwindcss.com/docs/min-height
 // tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
+// tailwind css v4, flex (flex-1): https://tailwindcss.com/docs/flex
+// tailwind css v4, width and height (size-*): https://tailwindcss.com/docs/width
 // tailwind css v4, border-color: https://tailwindcss.com/docs/border-color
 // tailwind css v4, arbitrary variants: https://tailwindcss.com/docs/hover-focus-and-other-states#using-arbitrary-variants
 // mdn, aria-busy: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-busy
@@ -298,4 +313,4 @@ export default function ControlPanel(props: Props) {
 // mdn, alert role: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/alert_role
 // mdn, aria-live: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-live
 // mdn, number.toLocaleString: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString
-// tsdoc standard: https://tsdoc.org  
+// tsdoc standard: https://tsdoc.org

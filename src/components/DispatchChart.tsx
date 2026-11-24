@@ -19,10 +19,12 @@
 //   tooltip width: w-44 (176px), it sits beside the bar, on the right for the left half
 //   of the blocks and on the left for the right half, so it does not cover the bar
 //
-// responsive (task 6.1):
-//   below md the wrapper is at least 600px wide inside a sideways scrolling box, so the
-//   axis text stays readable on a phone instead of shrinking to about 6px
-//   from md up the chart fills its box again, like before
+// responsive (task 6.1, refined after 6.4):
+//   below xl the wrapper is at least 600px wide inside a sideways scrolling box, so the
+//   axis text stays readable instead of shrinking
+//   from xl up the chart fills its box again, which is also where the price row lines up
+//   why xl and not md: at 768px to 1279px the results panel is only about 370px to 850px
+//   wide, so a chart that shrinks to fit would draw its 15px axis text at 7px to 13px
 
 import { useState } from "react";
 import { CHART_H as H, CHART_PAD as PAD, CHART_W as W } from "@/lib/chartLayout";
@@ -84,9 +86,9 @@ const legendItem =
 // focus-visible outline shows when the keyboard focuses it, so keyboard users can scroll it with the arrows
 const scrollBox = "overflow-x-auto focus-visible:outline-2 focus-visible:outline-white";
 
-// the chart wrapper: relative for the tooltip, and a minimum width on small screens so the
+// the chart wrapper: relative for the tooltip, and a minimum width below xl so the
 // svg text stays readable (the scroll box above lets the rest scroll sideways)
-const chartWrap = "relative min-w-[600px] md:min-w-0";
+const chartWrap = "relative min-w-[600px] xl:min-w-0";
 
 /**
  * stacked bar chart of the dispatch per block, with the demand drawn on top as a dashed line
@@ -110,7 +112,7 @@ const chartWrap = "relative min-w-[600px] md:min-w-0";
  *   group only if supply is over demand, which the solver allows for a block
  * - a block without a name in `blockHours` (more blocks than hours) shows no hours line
  * - the segments react to the mouse and to touch (a tap counts as hover), they are not
- *   keyboard focusable, the text alternative for the chart comes in the accessibility task
+ *   keyboard focusable, the text alternative is the hidden table under the svg
  * - the size and the padding are shared with the price row, if you change them in
  *   `lib/chartLayout.ts` both follow, do not hardcode them again here
  *
@@ -122,7 +124,8 @@ const chartWrap = "relative min-w-[600px] md:min-w-0";
  * - the scroll box has `tabIndex={0}` and a label, because a scrollable area that cannot
  *   take focus is not reachable with the keyboard
  * - the price row under the chart does not scroll with it, below xl it is its own grid
- *   (see PriceRow.tsx), so the two only line up from xl up, which is the same as before
+ *   (see PriceRow.tsx), so the two only line up from xl up, and the chart now only shrinks
+ *   from xl up too, so the two always change at the same width
  *
  * @example
  * ```tsx
@@ -181,7 +184,7 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
 
   return (
     <div className="screen p-3">
-      {/* scroll box: on phones the chart is wider than the screen and scrolls sideways */}
+      {/* scroll box: below xl the chart is wider than the panel and scrolls sideways */}
       <div className={scrollBox} tabIndex={0} role="region" aria-label="Dispatch chart, scrolls sideways on small screens">
         {/* relative wrapper: the tooltip is positioned against the svg, not the whole box */}
         <div className={chartWrap}>
@@ -361,7 +364,7 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
 // tailwind css v4, stroke: https://tailwindcss.com/docs/stroke
 // tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
 // tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
-// tailwind css v4, responsive design (max-md: variant): https://tailwindcss.com/docs/responsive-design#targeting-a-breakpoint-range
+// tailwind css v4, responsive design (breakpoints and the max-md: variant): https://tailwindcss.com/docs/responsive-design
 // tailwind css v4, text decoration (line-through): https://tailwindcss.com/docs/text-decoration-line
 // cmsc 150 final project spec, table 2 (demand and block hours)
 // tsdoc standard: https://tsdoc.org

@@ -4,8 +4,14 @@
 // it holds no state, everything comes in through props
 //
 // layout (edit the tailwind classes below):
-//   2 columns on small screens, 5 columns from md up (md:grid-cols-5)
+//   2 columns below lg, 5 columns from lg up (lg:grid-cols-5)
 //   the cost box has col-span-2 so it is twice as wide, change it to col-span-3 to widen it more
+//
+// why lg and not md:
+//   a breakpoint looks at the window, not at the panel this grid sits in, and at md
+//   (768px to 1023px) the right panel is only about 340px wide because the controls
+//   take the left column, five columns there would be about 60px each and the big
+//   gold numbers would overflow, from lg up the panel is wide enough
 
 import { formatPeso } from "@/lib/format";
 
@@ -69,6 +75,8 @@ const MISSING = "-";
  * - `cost` is left out for an infeasible problem, so the cost box is not drawn at all
  *   and the other boxes move to fill the row
  * - a count that the api did not send shows "-" instead of the word "undefined"
+ * - below lg the cost box fills a whole row of 2 columns, and the other three boxes
+ *   wrap under it, which keeps the long peso number on one line
  *
  * @example
  * ```tsx
@@ -77,7 +85,7 @@ const MISSING = "-";
  */
 export default function StatGrid({ cost, iterations, unknowns, constraints }: StatGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
       {/* col-span-2 makes the cost box twice as wide because its number is long */}
       {cost !== undefined && <Stat label="Total minimum cost, Z" value={formatPeso(cost)} className="col-span-2" />}
       <Stat label="Number of iterations" value={iterations === undefined ? MISSING : String(iterations)} />
@@ -91,6 +99,7 @@ export default function StatGrid({ cost, iterations, unknowns, constraints }: St
 // react, passing props to a component: https://react.dev/learn/passing-props-to-a-component
 // tailwind css v4, grid template columns: https://tailwindcss.com/docs/grid-template-columns
 // tailwind css v4, grid column span: https://tailwindcss.com/docs/grid-column
+// tailwind css v4, responsive design (breakpoints look at the window): https://tailwindcss.com/docs/responsive-design
 // tailwind css v4, overflow wrap (wrap-break-word): https://tailwindcss.com/docs/overflow-wrap
 // mdn, string conversion (String()): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/String
 // tsdoc standard: https://tsdoc.org
