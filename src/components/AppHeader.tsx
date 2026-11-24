@@ -5,12 +5,17 @@
 //
 // layout (edit the tailwind classes below):
 //   outer <header>  full width, so the grass reaches both screen edges
-//   inner wrapper   capped at 1320px (1800px from 2xl) like the content below, one flex row:
+//   inner wrapper   capped at 1320px (120rem from 2xl) like the content below, one flex row:
 //                   logo and title on the left, button group on the right
 //                   on small screens the row wraps and the buttons drop under the title
 //   sticky          only when the window is at least 768px wide AND 800px tall,
 //                   see the remarks on the component for why
 //   title size      1.25rem on phones, the full 1.9rem token from sm up (task 6.1)
+//
+// fit to screen (2xl and up):
+//   the header is only about 5.5rem tall, so the results get the rest of the screen:
+//   smaller logo (size-10), a 1.5rem title, no subtitle, 36px buttons, less padding
+//   the top padding stays at 1.5rem so the title still starts under the grass strip
 //
 // width note:
 //   the two max widths must match the content wrapper in page.tsx, otherwise the logo and
@@ -63,6 +68,7 @@ const stickyOnTall =
  * `crispEdges` stops the browser from blurring the cell borders
  * it is decorative (the title next to it already names the app),
  * so it is hidden from screen readers with `aria-hidden`
+ * it is 48px (`size-12`) and 40px (`2xl:size-10`) in the fit layout
  *
  * @example
  * ```tsx
@@ -74,7 +80,7 @@ function DirtBlockIcon() {
     <svg
       viewBox="0 0 8 8"
       aria-hidden="true"
-      className="size-12 shrink-0 border-2 border-black [shape-rendering:crispEdges]"
+      className="size-12 shrink-0 border-2 border-black [shape-rendering:crispEdges] 2xl:size-10"
     >
       {dirtBlock.map((row, y) =>
         // one rect per cell, 64 in total, which is small enough to not need run merging
@@ -102,6 +108,7 @@ function DirtBlockIcon() {
  * - when task 3.2 makes the control panel sticky, give it a top offset that
  *   clears this header (about `md:top-32`) only inside the same media query,
  *   otherwise the panel would slide under the header on tall screens
+ * - from 2xl the page itself does not scroll, so the sticky rule has nothing to do there
  *
  * responsive decision (task 6.1):
  * - the title uses the press start 2p font, which is very wide (about one
@@ -109,10 +116,14 @@ function DirtBlockIcon() {
  *   a 390px phone, so below sm it is 1.25rem (about 260px, with the icon it fits)
  * - from sm up the normal `text-pixel-title` token is used again
  *
- * wide screen decision (right rail):
- * - from 2xl (1536px) the inner wrapper grows from 1320px to 1800px, the same as the
- *   content in page.tsx, so the page has room for the third column (key insights)
- *   and the logo and the buttons stay lined up with the outer edges of the columns
+ * fit to screen (2xl and up):
+ * - the subtitle is hidden (`2xl:hidden`), the title says what the app is, and the
+ *   landing page and the how it works dialog explain the rest
+ * - the grass strip in `globals.css` is 18px tall (a fixed size, it does not scale with the
+ *   root font size), the top padding is 1.5rem, so the title starts under the strip as long as the
+ *   root size is at least 12px, at the smallest root size (9px) the title may touch it
+ * - the buttons are `2xl:min-h-9` (36px at a 16px root), the 44px touch rule is for touch
+ *   screens, and a window this wide is almost always used with a mouse
  *
  * edge cases:
  * - `flex-wrap` lets the button group drop under the title on phones,
@@ -126,7 +137,7 @@ function DirtBlockIcon() {
  *   the state, which is why there is no `aria-pressed` (a changing label plus a pressed
  *   state would be read twice by screen readers)
  * - the speaker emoji is decorative and `aria-hidden`, the words carry the meaning
- * - the button is a normal `.btn`, so it gets the 44px touch size and the focus ring
+ * - the button is a normal `.btn`, so it gets the focus ring
  * - the click sound for this button is played by the page, not here
  *
  * @example
@@ -137,16 +148,17 @@ function DirtBlockIcon() {
 export default function AppHeader({ onMainMenu, soundOn, onToggleSound }: AppHeaderProps) {
   return (
     // z-40 keeps the sticky header above the tables and the chart while scrolling
-    <header className={`grass-strip z-40 mb-6 border-b-4 border-black px-4 pb-5 pt-7 ${stickyOnTall}`}>
-      <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center justify-between gap-x-4 gap-y-3 2xl:max-w-[1800px]">
+    <header className={`grass-strip z-40 mb-6 border-b-4 border-black px-4 pb-5 pt-7 ${stickyOnTall} 2xl:mb-3 2xl:pb-2 2xl:pt-6`}>
+      <div className="mx-auto flex w-full max-w-[1320px] flex-wrap items-center justify-between gap-x-4 gap-y-3 2xl:max-w-[120rem]">
         {/* left: logo and title block */}
         <div className="flex items-center gap-4">
           <DirtBlockIcon />
           <div>
-            <h1 className="font-pixel text-[1.25rem] font-normal text-white pixel-shadow sm:text-pixel-title">
+            <h1 className="font-pixel text-[1.25rem] font-normal text-white pixel-shadow sm:text-pixel-title 2xl:text-[1.5rem]">
               Luzon <span className="text-gold">GridSim</span>
             </h1>
-            <p className="mt-3 text-large text-white pixel-shadow-sm">
+            {/* hidden in the fit layout to save height */}
+            <p className="mt-3 text-large text-white pixel-shadow-sm 2xl:hidden">
               Craft the cheapest way to power Luzon for one day. Solved with the simplex method.
             </p>
           </div>
@@ -154,10 +166,10 @@ export default function AppHeader({ onMainMenu, soundOn, onToggleSound }: AppHea
 
         {/* right: button group, add more buttons here (like the sound toggle) */}
         <div role="group" aria-label="Header actions" className="ml-auto flex flex-wrap items-center gap-2">
-          <button type="button" className="btn" onClick={onToggleSound}>
+          <button type="button" className="btn 2xl:min-h-9" onClick={onToggleSound}>
             <span aria-hidden="true">{soundOn ? "🔊" : "🔇"}</span> Sound: {soundOn ? "On" : "Off"}
           </button>
-          <button type="button" className="btn" onClick={onMainMenu}>
+          <button type="button" className="btn 2xl:min-h-9" onClick={onMainMenu}>
             Main Menu
           </button>
         </div>
@@ -171,10 +183,12 @@ export default function AppHeader({ onMainMenu, soundOn, onToggleSound }: AppHea
 // tailwind css v4, arbitrary values (text-[1.25rem]): https://tailwindcss.com/docs/adding-custom-styles#using-arbitrary-values
 // tailwind css v4, responsive design (sm: and 2xl: breakpoints): https://tailwindcss.com/docs/responsive-design
 // tailwind css v4, max-width: https://tailwindcss.com/docs/max-width
+// tailwind css v4, display (hidden): https://tailwindcss.com/docs/display
 // tailwind css, position (sticky): https://tailwindcss.com/docs/position
 // mdn, position: sticky: https://developer.mozilla.org/en-US/docs/Web/CSS/position
 // mdn, height media feature: https://developer.mozilla.org/en-US/docs/Web/CSS/@media/height
 // mdn, svg shape-rendering (crispEdges): https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/shape-rendering
 // wai-aria, group role: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/group_role
+// w3c wcag 2.2, target size (minimum), 2.5.8: https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
 // tsdoc standard: https://tsdoc.org
 // react, rendering lists (keys): https://react.dev/learn/rendering-lists

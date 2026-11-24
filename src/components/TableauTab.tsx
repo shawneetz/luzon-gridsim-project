@@ -9,6 +9,10 @@
 // the chosen iteration with a "basic solution" row at the bottom and the pivot marked in
 // gold (see DataTable.tsx)
 // layout: a flex column; the button row wraps on small screens
+//
+// fit to screen (2xl and up):
+//   the viewer is as tall as the tab panel (h-full) and the table takes all the height that
+//   is left under the controls, so there is no fixed 560px box, the table scrolls inside itself
 
 import { useState } from "react";
 import DataTable, { type PivotHighlight } from "./DataTable";
@@ -57,6 +61,12 @@ function pivotOf(step: TableauStep): PivotHighlight | undefined {
  * - the summary gets the plain `step`, not the rows with the basic solution added, so it
  *   reads the pivot element from the real tableau values
  *
+ * fit to screen (2xl and up):
+ * - the table box gets `2xl:max-h-none 2xl:min-h-0 2xl:flex-1`, which replaces the fixed `max-h-[560px]`
+ *   of `DataTable` with "all the free height", the parts above it need about 13rem, so at the
+ *   design size the table is about 30rem tall, which is around 20 rows
+ * - the flex column needs `min-h-0` too, or the table would push the viewer taller than the panel
+ *
  * @example
  * ```tsx
  * <TableauTab key={runId} steps={result.tableaus!} />
@@ -88,20 +98,20 @@ export default function TableauTab({ steps }: { steps: TableauStep[] }) {
       : `Iteration ${step.iteration} of ${steps[last].iteration}`;
 
   return (
-    <div className="flex flex-col gap-3.5">
+    <div className="flex flex-col gap-3.5 2xl:h-full 2xl:min-h-0 2xl:gap-2">
       {/* xp bar: where we are in the run, click it or use the arrow keys */}
       <XpBar value={index} max={last} label={barLabel} ariaLabel="Simplex iteration" onChange={go} />
 
       {/* navigation: first, previous, dropdown, next, last */}
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn" onClick={() => go(0)} disabled={index === 0}>
+        <button type="button" className="btn 2xl:min-h-9" onClick={() => go(0)} disabled={index === 0}>
           First
         </button>
-        <button type="button" className="btn" onClick={() => go(index - 1)} disabled={index === 0}>
+        <button type="button" className="btn 2xl:min-h-9" onClick={() => go(index - 1)} disabled={index === 0}>
           Previous
         </button>
         <select
-          className="field-input"
+          className="field-input 2xl:min-h-9"
           aria-label="Jump to iteration"
           value={index}
           onChange={(e) => go(Number(e.target.value))}
@@ -112,19 +122,20 @@ export default function TableauTab({ steps }: { steps: TableauStep[] }) {
             </option>
           ))}
         </select>
-        <button type="button" className="btn" onClick={() => go(index + 1)} disabled={index === last}>
+        <button type="button" className="btn 2xl:min-h-9" onClick={() => go(index + 1)} disabled={index === last}>
           Next
         </button>
-        <button type="button" className="btn" onClick={() => go(last)} disabled={index === last}>
+        <button type="button" className="btn 2xl:min-h-9" onClick={() => go(last)} disabled={index === last}>
           Last
         </button>
       </div>
 
       {/* title, then one line that says which pivot this iteration used */}
-      <h3 className="subheading">{title}</h3>
+      <h3 className="subheading 2xl:mt-0">{title}</h3>
       <PivotSummary step={step} />
 
-      {/* the tableau rows plus the basic solution row at the bottom, pivot marked in gold */}
+      {/* the tableau rows plus the basic solution row at the bottom, pivot marked in gold
+          at 2xl the box fills the free height instead of the fixed 560px */}
       <DataTable
         corner=""
         columns={step.colNames}
@@ -132,6 +143,7 @@ export default function TableauTab({ steps }: { steps: TableauStep[] }) {
         rows={[...step.values, basicRow]}
         highlight={pivotOf(step)}
         label="Simplex tableau"
+        className="2xl:max-h-none 2xl:min-h-0 2xl:flex-1"
       />
     </div>
   );
@@ -145,5 +157,8 @@ export default function TableauTab({ steps }: { steps: TableauStep[] }) {
 // typescript, importing types inline (import { type X }): https://www.typescriptlang.org/docs/handbook/modules/reference.html#type-modifiers-on-import-names
 // mdn, typeof operator: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof
 // mdn, math.min and math.max: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min
+// mdn, flexbox (min-height auto and shrinking): https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Controlling_ratios_of_flex_items_along_the_main_axis
+// tailwind css v4, max-height: https://tailwindcss.com/docs/max-height
+// tailwind css v4, flex (flex-1): https://tailwindcss.com/docs/flex
 // wai-aria authoring practices, slider pattern: https://www.w3.org/WAI/ARIA/apg/patterns/slider/
 // tsdoc standard: https://tsdoc.org

@@ -1,6 +1,6 @@
 // left side of the page: plant group slots, the co2 cap toggle, and the solve button
 // each plant group is an inventory slot you click to select (white frame) or unselect
-// the slot shows the plant's image (from lib/plants.ts) above its name, tag and capacity
+// the slot shows the plant's image (from lib/plants.ts) next to or above its name, tag and capacity
 // hovering or focusing a slot shows an item tooltip with the details (see Tooltip.tsx)
 // the heading shows how many groups are selected, like "3 of 7 selected"
 // a bad co2 limit shows a red message under the box, and the solve button is
@@ -11,10 +11,20 @@
 // layout (edit the tailwind classes below):
 //   plant slots are a 2 column grid, change grid-cols-2 for more or fewer columns
 //   if you change the column count, also change how `align` is picked for the tooltip
-//   image size is the size-12 class on the <img> (48px), change it to resize all icons
-//   sticky: from md up the panel sticks while the results scroll, see `stickyPanel`
+//   image size is the size-12 class on the <img> (48px), size-10 (40px) at 2xl
+//   sticky: from md up to below 2xl the panel sticks while the results scroll, see `stickyPanel`
 //   touch targets (task 6.1): every slot is taller than 44px, buttons get min-h-11 from
 //   .btn, and the co2 checkbox row has min-h-11 so the whole row is the tap area
+//
+// fit to screen (2xl and up):
+//   - the panel is as tall as the screen area (h-full) and is a flex column, so the slot grid
+//     takes whatever height is left between the buttons above and the co2 box below
+//   - the slots are rows (icon left, text right), because a tall slot would not fit 4 rows,
+//     the grid uses equal rows (auto-rows-fr) so the slots share the free height
+//   - buttons and fields are 36px (min-h-9) instead of 44px, the 44px touch rule is for
+//     touch screens, and the sizes scale with the root font size anyway
+//   - the panel does not stick (the page does not scroll), it only scrolls inside itself
+//     if the window is too short
 //
 // size refinement (after task 6.4):
 //   - check all and reset share the row equally (flex-1), so each one is a wide target
@@ -48,25 +58,34 @@ interface Props {
 // h-full w-full makes the button fill the tooltip wrapper, which fills the grid cell
 // min-h-11 is a safety net: a slot is already about 110px tall, but this keeps the
 // 44px touch rule true even if the content gets smaller later
-const slotBase = "slot flex h-full min-h-11 w-full flex-col items-start gap-0.5 p-2 text-left text-ink";
+// at 2xl the slot is a row: min-h-0 drops the safety net, flex-row puts the icon left of the text
+const slotBase =
+  "slot flex h-full min-h-11 w-full flex-col items-start gap-0.5 p-2 text-left text-ink 2xl:min-h-0 2xl:flex-row 2xl:items-center 2xl:gap-2 2xl:p-1.5";
 const slotOff = "hover:bg-slot-hover";                                         // not selected
-const slotOn = "border-4 border-white bg-slot-selected pb-3.5 outline-2 outline-black"; // selected
+// selected: the extra bottom padding leaves room for the color bar, 2xl:pb-3 replaces it at 2xl
+// (2xl:p-1.5 on the base would otherwise win over pb-3.5, so the bottom is set again here)
+const slotOn = "border-4 border-white bg-slot-selected pb-3.5 outline-2 outline-black 2xl:pb-3";
 const slotFocus = "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-black";
 const checkboxFocus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
 
-// sticky panel (task 3.2)
+// sticky panel (task 3.2), now only between md and 2xl
 // - the panel sticks from md up, because below md the layout is one column and sticking makes no sense
+// - from 2xl the page does not scroll (see page.tsx), so the panel is a fixed height column there
+//   and these rules must not apply, md:max-2xl: means "from md up, below 2xl"
 // - the app header (see AppHeader.tsx) only sticks on windows at least 768px wide and 800px tall,
 //   so on those windows the panel needs a bigger top offset to stay under the header
 // - max-h plus overflow-y-auto keeps the solve button reachable when the panel is taller than the
 //   window, the panel scrolls inside itself instead of being cut off
 // - the media query is written once as a constant so the classes always use the same rule
-//   (underscores become spaces in tailwind arbitrary values)
-const tallDesktop = "[@media(min-width:768px)_and_(min-height:800px)]";
+//   (underscores become spaces in tailwind arbitrary values), max-width 1535px is "below 2xl"
+const tallDesktop = "[@media(min-width:768px)_and_(max-width:1535px)_and_(min-height:800px)]";
 const stickyPanel = [
-  "md:sticky md:top-4 md:max-h-[calc(100vh-2rem)] md:overflow-y-auto",
+  "md:max-2xl:sticky md:max-2xl:top-4 md:max-2xl:max-h-[calc(100vh-2rem)] md:max-2xl:overflow-y-auto",
   `${tallDesktop}:top-36 ${tallDesktop}:max-h-[calc(100vh-10rem)]`,
 ].join(" ");
+
+// fit layout of the panel itself: a column as tall as its grid cell, scrolls inside only if it must
+const fitPanel = "2xl:flex 2xl:h-full 2xl:min-h-0 2xl:flex-col 2xl:overflow-y-auto 2xl:p-3";
 
 // inline error under the co2 box (task 3.4)
 // it sits on a black plate, because the red text token is too light to read on the gray panel
@@ -133,6 +152,16 @@ function PlantTooltip({ group, style }: { group: string; style: PlantStyle }) {
  * - check all and reset use `flex-1`, so they split the row and never sit as two
  *   small buttons with empty space next to them
  *
+ * fit to screen (2xl and up):
+ * - height budget in rem at the design size: fixed parts about 19.4 (padding 1.5, heading row 1.5,
+ *   buttons 2.25, co2 heading 2.5, checkbox 2.25, limit box 4.7, solve button 3.45, gaps), a slot
+ *   row at least 5.1 when selected, so four rows need 21.9, and the panel has 51.75 to use, so the
+ *   slot grid grows to fill the rest (`flex-1` with `auto-rows-fr`)
+ * - the text of a slot sits in its own `span`, so the slot can be a row at 2xl and a column
+ *   below it, on small screens the `span` is a plain column with the same 2px gap as before
+ * - the plant name has `whitespace-nowrap` at 2xl, "Natural Gas" needs about 76px, and a slot has about
+ *   84px for the text next to the icon, so it fits on one line
+ *
  * edge cases:
  * - the selection count uses `groups.length` as the total, so it stays right
  *   if the api ever sends more or fewer plant groups than 7
@@ -166,7 +195,7 @@ export default function ControlPanel(props: Props) {
   const solveBlocked = solveHint !== "";
 
   return (
-    <section className={`panel w-full p-4 ${stickyPanel}`}>
+    <section className={`panel w-full p-4 ${stickyPanel} ${fitPanel}`}>
       {/* heading row: title on the left, selection count on the right */}
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="heading">Plant groups</h2>
@@ -178,16 +207,17 @@ export default function ControlPanel(props: Props) {
 
       {/* quick select buttons, flex-1 splits the row evenly */}
       <div className="flex gap-2">
-        <button type="button" className="btn flex-1" onClick={props.onCheckAll}>
+        <button type="button" className="btn flex-1 2xl:min-h-9" onClick={props.onCheckAll}>
           Check All
         </button>
-        <button type="button" className="btn flex-1" onClick={props.onReset}>
+        <button type="button" className="btn flex-1 2xl:min-h-9" onClick={props.onReset}>
           Reset
         </button>
       </div>
 
-      {/* one slot per plant group; clicking a slot selects or unselects it */}
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      {/* one slot per plant group; clicking a slot selects or unselects it
+          at 2xl the grid fills the free height with equal rows */}
+      <div className="mt-3 grid grid-cols-2 gap-2 2xl:mt-2 2xl:min-h-0 2xl:flex-1 2xl:auto-rows-fr">
         {props.groups.map((group, i) => {
           const style = styleOf(group);
           const isOn = props.selected.includes(group);
@@ -209,25 +239,29 @@ export default function ControlPanel(props: Props) {
                   aria-describedby={describedBy}
                   onClick={() => props.onToggleGroup(group)}
                 >
-                  {/* fixed 48px box: object-contain fits any image size without stretching,
-                      pixelated keeps pixel art sharp. plain <img> keeps this simple,
+                  {/* fixed 48px box (40px at 2xl): object-contain fits any image size without
+                      stretching, pixelated keeps pixel art sharp. plain <img> keeps this simple,
                       so the next/image lint rule is switched off for this line */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={style.image}
                     alt=""
-                    className="size-12 object-contain [image-rendering:pixelated]"
+                    className="size-12 shrink-0 object-contain [image-rendering:pixelated] 2xl:size-10"
                   />
-                  <span className="font-body text-input leading-none">{group}</span>
-                  {/* text-pixel-label (0.65rem) is the smallest size that is still easy to read */}
-                  <span className="font-pixel text-pixel-label text-ink-soft">{style.tag}</span>
 
-                  {/* capacity hint, only for groups that have a known capacity */}
-                  {style.capMw > 0 && (
-                    <span className="font-body text-small leading-none text-ink-soft">
-                      {style.capMw.toLocaleString("en-US")} MW
-                    </span>
-                  )}
+                  {/* the text of the slot: a column in both layouts, only its position changes */}
+                  <span className="flex min-w-0 flex-col items-start gap-0.5">
+                    <span className="font-body text-input leading-none 2xl:whitespace-nowrap">{group}</span>
+                    {/* text-pixel-label (0.65rem) is the smallest size that is still easy to read */}
+                    <span className="font-pixel text-pixel-label text-ink-soft">{style.tag}</span>
+
+                    {/* capacity hint, only for groups that have a known capacity */}
+                    {style.capMw > 0 && (
+                      <span className="font-body text-small leading-none text-ink-soft">
+                        {style.capMw.toLocaleString("en-US")} MW
+                      </span>
+                    )}
+                  </span>
                 </button>
               )}
             </Tooltip>
@@ -236,9 +270,9 @@ export default function ControlPanel(props: Props) {
       </div>
 
       {/* co2 cap: the limit box is disabled until the toggle is on */}
-      <h2 className="heading">CO₂ cap</h2>
-      {/* min-h-11 makes the whole row a 44px tap area for the checkbox */}
-      <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
+      <h2 className="heading 2xl:mt-2">CO₂ cap</h2>
+      {/* min-h-11 makes the whole row a 44px tap area for the checkbox (36px at 2xl) */}
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 2xl:min-h-9">
         <input
           type="checkbox"
           className={`size-6 accent-grass-dark ${checkboxFocus}`}
@@ -247,13 +281,13 @@ export default function ControlPanel(props: Props) {
         />
         Limit daily CO₂
       </label>
-      <label className="mt-2.5 flex flex-col gap-1">
+      <label className="mt-2.5 flex flex-col gap-1 2xl:mt-1">
         Limit (t/day)
         <input
           type="text"
           inputMode="numeric"
           // red frame while the value is bad, it wins over the default gray frame
-          className={`field-input ${co2Error ? "border-red" : ""}`}
+          className={`field-input 2xl:min-h-9 ${co2Error ? "border-red" : ""}`}
           value={props.co2Cap}
           disabled={!props.co2On}
           aria-invalid={co2Error !== ""}
@@ -274,7 +308,7 @@ export default function ControlPanel(props: Props) {
           text-pixel-sub matches the landing menu buttons */}
       <button
         type="button"
-        className="btn btn-grass mt-5 w-full py-4 text-pixel-sub"
+        className="btn btn-grass mt-5 w-full py-4 text-pixel-sub 2xl:mt-3 2xl:py-3"
         onClick={props.onSolve}
         disabled={props.loading || solveBlocked}
         aria-busy={props.loading}
@@ -285,7 +319,7 @@ export default function ControlPanel(props: Props) {
 
       {/* hint under the button, says why solve is disabled (hidden while solving) */}
       {solveBlocked && !props.loading && (
-        <p id={solveHintId} className="mt-2 text-center text-small text-ink-soft">
+        <p id={solveHintId} className="mt-2 text-center text-small text-ink-soft 2xl:mt-1">
           {solveHint}
         </p>
       )}
@@ -300,10 +334,12 @@ export default function ControlPanel(props: Props) {
 // react, render props pattern (children as a function): https://react.dev/reference/react/Children
 // react, rendering lists (keys): https://react.dev/learn/rendering-lists
 // tailwind css v4, position (sticky): https://tailwindcss.com/docs/position
+// tailwind css v4, responsive design (md:max-2xl: breakpoint range): https://tailwindcss.com/docs/responsive-design#targeting-a-breakpoint-range
 // tailwind css v4, max-height: https://tailwindcss.com/docs/max-height
 // tailwind css v4, min-height: https://tailwindcss.com/docs/min-height
 // tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
 // tailwind css v4, flex (flex-1): https://tailwindcss.com/docs/flex
+// tailwind css v4, grid auto rows (auto-rows-fr): https://tailwindcss.com/docs/grid-auto-rows
 // tailwind css v4, width and height (size-*): https://tailwindcss.com/docs/width
 // tailwind css v4, border-color: https://tailwindcss.com/docs/border-color
 // tailwind css v4, arbitrary variants: https://tailwindcss.com/docs/hover-focus-and-other-states#using-arbitrary-variants

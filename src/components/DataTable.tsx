@@ -13,6 +13,12 @@
 //   cell    = shared padding and line for every th and td
 //   colHead = top header cells,  rowHead = first column cells,  corner = top-left cell
 //   the *Pivot constants are added on top of the normal look of a cell
+//
+// fit to screen (2xl and up):
+//   - the cells have less vertical padding (2xl:py-0.5), so a row is about 23px instead of 27px,
+//     the results table has 10 rows, so this saves about 2.5rem of height
+//   - the `className` prop lets the parent change the size of the scroll box, the tableau tab
+//     uses it to make the table fill the free height instead of the fixed 560px
 
 import { formatNumber } from "@/lib/format";
 
@@ -42,10 +48,12 @@ interface Props {
   footerRows?: FooterRow[];
   /** accessible label for the scroll region */
   label?: string;
+  /** extra tailwind classes for the scroll box, e.g. "2xl:max-h-none 2xl:flex-1" (default: none) */
+  className?: string;
 }
 
 // shared by every cell
-const cell = "whitespace-nowrap border-b border-line px-2.5 py-1";
+const cell = "whitespace-nowrap border-b border-line px-2.5 py-1 2xl:py-0.5";
 // column headers stick to the top
 const colHead = `${cell} sticky top-0 z-20 bg-head text-right text-gold`;
 // row labels stick to the left
@@ -102,18 +110,20 @@ function pivotCellClass(isPivotRow: boolean, isPivotCol: boolean): string {
  * - the hover tint (`group-hover:bg-row-hover`) is declared after the pivot tint in the class list,
  *   so hovering a pivot row still shows the hover color, the pivot element stays gold
  *   because it is the strongest class and sits on the cell itself
+ * - `className` is added at the end of the scroll box classes, so `2xl:max-h-none` there wins over
+ *   the fixed `max-h-[560px]`, the tableau tab needs the box to be as tall as the free space
  *
  * @example
  * ```tsx
  * <DataTable corner="" columns={cols} rowLabels={rowNames} rows={values} highlight={{ row: 2, col: 5 }} />
  * ```
  */
-export default function DataTable({ corner: cornerText, columns, rowLabels, rows, highlight, footerRows = [], label = "Scrollable table" }: Props) {
+export default function DataTable({ corner: cornerText, columns, rowLabels, rows, highlight, footerRows = [], label = "Scrollable table", className = "" }: Props) {
   const pivot = Array.isArray(highlight) ? undefined : highlight;
   const fullCapacity = Array.isArray(highlight) ? highlight : undefined;
   return (
     // scrollable box so wide tableaus do not break the page (change max-h to resize)
-    <div className="screen max-h-[560px] overflow-auto" tabIndex={0} role="region" aria-label={label}>
+    <div className={`screen max-h-[560px] overflow-auto ${className}`} tabIndex={0} role="region" aria-label={label}>
       <table className="border-separate border-spacing-0 font-body text-table text-white tabular-nums">
         <thead>
           <tr>
@@ -173,6 +183,8 @@ export default function DataTable({ corner: cornerText, columns, rowLabels, rows
 // mdn, optional chaining (?.): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
 // tailwind css v4, background color (opacity modifier like bg-gold/15): https://tailwindcss.com/docs/background-color
 // tailwind css v4, hover, focus and other states (group-hover): https://tailwindcss.com/docs/hover-focus-and-other-states
+// tailwind css v4, max-height: https://tailwindcss.com/docs/max-height
+// tailwind css v4, padding: https://tailwindcss.com/docs/padding
 // mdn, position: sticky: https://developer.mozilla.org/en-US/docs/Web/CSS/position
 // cmsc 150 laboratory topic 5, simplex method (pivot element, pivot row and column)
 // tsdoc standard: https://tsdoc.org

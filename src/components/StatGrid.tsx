@@ -12,6 +12,10 @@
 //   (768px to 1023px) the right panel is only about 340px wide because the controls
 //   take the left column, five columns there would be about 60px each and the big
 //   gold numbers would overflow, from lg up the panel is wide enough
+//
+// fit to screen (2xl and up):
+//   the boxes are shorter (2xl:py-1.5) and the value uses the 1.5rem token (text-large) instead of
+//   the 1.9rem stat size, so the summary row is about 4rem tall instead of 5rem
 
 import { formatPeso } from "@/lib/format";
 
@@ -41,9 +45,9 @@ interface StatProps {
  */
 function Stat({ label, value, className = "" }: StatProps) {
   return (
-    <div className={`screen flex min-w-0 flex-col px-3 py-2.5 ${className}`}>
+    <div className={`screen flex min-w-0 flex-col px-3 py-2.5 2xl:py-1.5 ${className}`}>
       <span className="text-small text-label">{label}</span>
-      <span className="wrap-break-word text-stat leading-[1.1] text-gold gold-shadow">{value}</span>
+      <span className="wrap-break-word text-stat leading-[1.1] text-gold gold-shadow 2xl:text-large">{value}</span>
     </div>
   );
 }

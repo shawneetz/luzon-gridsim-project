@@ -15,15 +15,18 @@
 //   <main>      full width, so the grass strip can reach both screen edges
 //   <AppHeader> the grass title strip with the logo and the button group
 //               (see AppHeader.tsx, it uses the same max widths as the content below)
-//   grid        controls on the left (320px), results in the middle (rest of the width)
+//   grid        controls on the left (320px), results on the right (rest of the width)
 //               on small screens it becomes one column
-//   right rail  from 2xl up, after an optimal solve, the key insights get their own
-//               column on the far right (380px), so the screen is filled evenly
-//               (left controls, middle results, right insights)
 //
-// width notes:
-//   the content is capped at 1320px, and at 2xl (1536px) it grows to 1800px, because the
-//   third column needs room, if you change one of the two numbers, change AppHeader.tsx too
+// fit to screen (2xl and up, 1536px wide or more):
+//   - the page is exactly one screen tall (h-dvh) and does not scroll, header on top,
+//     then a grid that fills the rest of the height
+//   - the controls are 22rem wide, the results panel takes the rest, and the results are
+//     arranged inside it (summary on top, chart and prices left, table and insights right)
+//   - everything is sized in rem and the root font size follows the window, see guiScale
+//     in layout.tsx, which is turned on by the data-gui attribute set below
+//   - the content is capped at 120rem, and the header uses the same cap
+//   - below 2xl nothing changes, the page scrolls like before
 //
 // responsive notes (task 6.1):
 //   - the right panel has min-w-0, so a wide table or chart scrolls inside its own
@@ -47,7 +50,6 @@ import AppHeader from "@/components/AppHeader";
 import ControlPanel from "@/components/ControlPanel";
 import EmptyGuide from "@/components/EmptyGuide";
 import ErrorBanner from "@/components/ErrorBanner";
-import KeyInsights from "@/components/KeyInsights";
 import LandingPage from "@/components/LandingPage";
 import ResultsTab from "@/components/ResultsTab";
 import TableauTab from "@/components/TableauTab";
@@ -59,23 +61,18 @@ import type { Options, SolveResponse } from "@/lib/types";
 type Tab = "results" | "tableau";
 const panelLook = "focus-visible:outline-black focus-visible:-outline-offset-2";
 
-// grid columns, written in full so tailwind can find them at build time
-// without a result the grid has two columns, with an optimal result it gets a third one at 2xl
-const gridTwoColumns = "md:grid-cols-[320px_minmax(0,1fr)]";
-const gridThreeColumns = "md:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_380px]";
+// look of a tab panel: the focus ring above, and at 2xl it fills the rest of the results panel
+// overflow-y-auto is only a safety net, if the content is a little taller than the screen the
+// panel scrolls inside itself instead of cutting the content off
+const tabPanelLook = `${panelLook} 2xl:min-h-0 2xl:flex-1 2xl:overflow-y-auto`;
 
-// right rail (the key insights column), same sticky idea as the control panel
-// - it is hidden below 2xl, where the insights stay inside the results tab instead
-// - the app header only sticks on windows at least 768px wide and 800px tall, so on those
-//   windows the rail needs a bigger top offset to stay under it (same numbers as ControlPanel.tsx)
-// - max-h plus overflow-y-auto keeps the whole card reachable when it is taller than the window
-//   (underscores become spaces in tailwind arbitrary values)
-const tallDesktop = "[@media(min-width:768px)_and_(min-height:800px)]";
-const railLook = [
-  "panel hidden min-w-0 p-4 2xl:block",
-  "2xl:sticky 2xl:top-4 2xl:max-h-[calc(100vh-2rem)] 2xl:overflow-y-auto",
-  `${tallDesktop}:top-36 ${tallDesktop}:max-h-[calc(100vh-10rem)]`,
-].join(" ");
+// look of the two column grid
+// - one column on small screens, controls (320px) and results from md up
+// - at 2xl the grid is as tall as the page, controls are 22rem, and the one row is allowed to
+//   shrink (minmax(0,1fr)) so a tall column scrolls inside itself and not the page
+// - items-stretch replaces items-start at 2xl, because nothing sticks there anymore
+const gridLook =
+  "grid grid-cols-1 items-start gap-4 md:grid-cols-[320px_minmax(0,1fr)] 2xl:h-full 2xl:grid-cols-[22rem_minmax(0,1fr)] 2xl:grid-rows-[minmax(0,1fr)] 2xl:items-stretch 2xl:gap-3";
 
 /**
  * root page of the app: landing screen first, then the simulator
@@ -98,18 +95,18 @@ const railLook = [
  * - the two tab label spans are both in the dom, but only one is displayed at a
  *   time, so screen readers read just one of them
  *
- * right rail (key insights column):
- * - it exists only for an optimal result, because the api sends no dispatch or prices
- *   for the other statuses, so `showRail` checks both are there
- * - it stays visible on both tabs, so the columns do not jump when the player
- *   switches between results and tableau
- * - the grid gets its third column only when the rail exists, otherwise an empty 380px
- *   track would be left on the right of the guide or the error banner
- * - `ResultsTab` hides its own insights card at 2xl, and the rail is hidden below 2xl,
- *   so the card is only visible once at any width, the hidden one is `display: none`
- *   and is skipped by screen readers
- * - the middle column shrinks by 380px when the first optimal result arrives at 2xl,
- *   so the page shifts once on the first solve, this is expected
+ * fit to screen (2xl and up):
+ * - the effect below sets `data-gui="fit"` on the html element while the simulator is shown,
+ *   and removes it again when the player goes back to the landing page or the page unmounts,
+ *   the landing page is not designed for the smaller root size, so it must not get it
+ * - it sets a dom attribute and not state, so it does not cause a render, and it runs after
+ *   hydration, so there is no hydration mismatch
+ * - `main` is `h-dvh` with `min-h-[58rem]`: normally 58rem is not taller than the window, because
+ *   the root size is chosen from the height (see layout.tsx), the min height is only the fallback
+ *   for the smallest root size, where the page is allowed to scroll instead of cutting content off
+ * - the content wrapper is `flex-1 min-h-0`, so the grid gets exactly the height that is left
+ *   under the header
+ * - the number 58 here and in layout.tsx must be changed together
  *
  * tabs (task 6.2):
  * - roles: `tablist` > `tab` buttons, and one `tabpanel` per tab linked with
@@ -117,7 +114,8 @@ const railLook = [
  * - roving tabindex: only the selected tab is in the tab order (`tabIndex` 0), the other
  *   is -1, and the arrow keys move between tabs, so the whole tablist is one tab stop
  * - keys: left and right arrows wrap around, home and end jump to the first and last tab
- * - both panels are always rendered and the inactive one has the `hidden` attribute
+ * - both panels are always rendered and the inactive one has the `hidden` attribute,
+ *   tailwind's base styles make `hidden` win over the `2xl:` display classes
  *
  * sound (task 6.3):
  * - `soundOn` is the state the header toggle shows, the real switch lives in `lib/sound.ts`,
@@ -190,6 +188,17 @@ export default function Home() {
   useEffect(() => {
     loadOptions();
   }, [loadOptions]);
+
+  // fit to screen: turn the gui scale on while the simulator is shown (see guiScale in layout.tsx)
+  // the cleanup removes the attribute, so the landing page and a page change get the normal size
+  useEffect(() => {
+    if (!started) return;
+    const root = document.documentElement;
+    root.dataset.gui = "fit";
+    return () => {
+      delete root.dataset.gui;
+    };
+  }, [started]);
 
   // button click sound for the whole app (task 6.3)
   // one listener on the document catches every click that bubbles up from a button
@@ -266,9 +275,6 @@ export default function Home() {
   // the tableau tab only works when the solver returned tableaus
   const hasTableaus = result?.tableaus && result.tableaus.length > 0;
 
-  // the right rail only exists for an optimal result, the api sends no dispatch or prices otherwise
-  const showRail = result?.status === "optimal" && !!result.dispatch && !!result.prices;
-
   function selectTab(next: Tab) {
     setTab(next);
     tabRefs.current[next]?.focus();
@@ -299,20 +305,20 @@ export default function Home() {
   if (!started) return <LandingPage onStart={() => setStarted(true)} />;
 
   return (
-    <main className="pb-10">
+    // at 2xl the page is one screen tall and does not scroll (see the notes at the top of the file)
+    <main className="pb-10 2xl:flex 2xl:h-dvh 2xl:min-h-[58rem] 2xl:flex-col 2xl:overflow-hidden 2xl:pb-0">
       {/* header: logo, title and the button group, goes back to the landing page on "main menu" */}
       <AppHeader onMainMenu={() => setStarted(false)} soundOn={soundOn} onToggleSound={toggleSound} />
 
-      {/* content wrapper: same max widths as the header, centered, with side padding */}
-      <div className="mx-auto w-full max-w-[1320px] px-4 2xl:max-w-[1800px]">
+      {/* content wrapper: same max width as the header, centered, with side padding
+          at 2xl it takes the height that is left under the header, min-h-0 lets it shrink */}
+      <div className="mx-auto w-full max-w-[1320px] px-4 2xl:min-h-0 2xl:max-w-[120rem] 2xl:flex-1 2xl:pb-3">
         {/* the options request failed: banner with a retry button (the controls stay hidden) */}
         {loadError && <ErrorBanner message={loadError} onRetry={retryOptions} retrying={retryingOptions} />}
 
         {/* the app only shows after the options are loaded */}
         {options && (
-          // one column on small screens, two columns (320px | rest) from md up,
-          // and a third column (380px) from 2xl up when the key insights rail exists
-          <div className={`grid grid-cols-1 items-start gap-4 ${showRail ? gridThreeColumns : gridTwoColumns}`}>
+          <div className={gridLook}>
             {/* left side: controls */}
             <ControlPanel
               groups={options.groups}
@@ -328,11 +334,12 @@ export default function Home() {
               loading={loading}
             />
 
-            {/* middle: tabs and their content
-                min-w-0 lets this panel shrink inside the grid, so wide content scrolls inside itself */}
-            <section className="panel w-full min-w-0 p-4">
+            {/* right side: tabs and their content
+                min-w-0 lets this panel shrink inside the grid, so wide content scrolls inside itself
+                at 2xl it is a column, so the tab panels can fill the height under the tab buttons */}
+            <section className="panel w-full min-w-0 p-4 2xl:flex 2xl:min-h-0 2xl:flex-col 2xl:p-3">
               {/* tab buttons share the row equally; the active one turns green */}
-              <div role="tablist" aria-label="Simulation output" className="mb-4 flex gap-1.5" onKeyDown={handleTabKeys}>
+              <div role="tablist" aria-label="Simulation output" className="mb-4 flex gap-1.5 2xl:mb-2" onKeyDown={handleTabKeys}>
                 <button
                   type="button"
                   role="tab"
@@ -341,7 +348,7 @@ export default function Home() {
                   aria-selected={tab === "results"}
                   aria-controls={panelId("results")}
                   tabIndex={tab === "results" ? 0 : -1}
-                  className={`btn flex-1 ${tab === "results" ? "btn-grass" : ""}`}
+                  className={`btn flex-1 2xl:min-h-9 ${tab === "results" ? "btn-grass" : ""}`}
                   onClick={() => setTab("results")}
                 >
                   Results
@@ -354,7 +361,7 @@ export default function Home() {
                   aria-selected={tab === "tableau"}
                   aria-controls={panelId("tableau")}
                   tabIndex={tab === "tableau" ? 0 : -1}
-                  className={`btn flex-1 ${tab === "tableau" ? "btn-grass" : ""}`}
+                  className={`btn flex-1 2xl:min-h-9 ${tab === "tableau" ? "btn-grass" : ""}`}
                   onClick={() => setTab("tableau")}
                   disabled={!hasTableaus}
                 >
@@ -363,25 +370,17 @@ export default function Home() {
                   <span className="hidden sm:inline">Simplex Tableau</span>
                 </button>
               </div>
-              <div role="tabpanel" id={panelId("results")} aria-labelledby={tabId("results")} hidden={tab !== "results"} tabIndex={0} className={panelLook}>
+              <div role="tabpanel" id={panelId("results")} aria-labelledby={tabId("results")} hidden={tab !== "results"} tabIndex={0} className={tabPanelLook}>
                 {!result && <EmptyGuide />}
                 {result?.status === "error" && (
                   <ErrorBanner message={result.message ?? "Could not reach the solver API."} onRetry={handleSolve} retrying={loading} />
                 )}
                 {result && result.status !== "error" && <ResultsTab result={result} onRespawn={handleRespawn} />}
               </div>
-              <div role="tabpanel" id={panelId("tableau")} aria-labelledby={tabId("tableau")} hidden={tab !== "tableau"} tabIndex={0} className={panelLook}>
+              <div role="tabpanel" id={panelId("tableau")} aria-labelledby={tabId("tableau")} hidden={tab !== "tableau"} tabIndex={0} className={tabPanelLook}>
                 {hasTableaus && result?.tableaus && <TableauTab key={runId} steps={result.tableaus} />}
               </div>
             </section>
-
-            {/* right rail: key insights on the far right, only from 2xl up (see railLook) */}
-            {showRail && result?.dispatch && result.prices && (
-              <aside aria-label="Key insights" className={railLook}>
-                <h2 className="heading">Key insights</h2>
-                <KeyInsights dispatch={result.dispatch} prices={result.prices} />
-              </aside>
-            )}
           </div>
         )}
       </div>
@@ -392,17 +391,17 @@ export default function Home() {
 // references:
 // next.js app router, server and client components: https://nextjs.org/docs/app/getting-started/server-and-client-components
 // react, useState: https://react.dev/reference/react/useState
-// react, useEffect: https://react.dev/reference/react/useEffect
+// react, useEffect (and cleanup functions): https://react.dev/reference/react/useEffect
 // react, useCallback: https://react.dev/reference/react/useCallback
-// react, conditional rendering: https://react.dev/learn/conditional-rendering
+// mdn, htmlelement.dataset: https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/dataset
 // mdn, promise.prototype.finally: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/finally
 // mdn, nullish coalescing (??): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing
 // mdn, css grid min-width auto problem (why min-w-0 is needed): https://developer.mozilla.org/en-US/docs/Web/CSS/min-width
-// mdn, aside element: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/aside
+// mdn, hidden attribute: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/hidden
 // tailwind css v4, max-width: https://tailwindcss.com/docs/max-width
-// tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
-// tailwind css v4, grid template columns: https://tailwindcss.com/docs/grid-template-columns
-// tailwind css v4, position (sticky): https://tailwindcss.com/docs/position
+// tailwind css v4, min-height: https://tailwindcss.com/docs/min-height
+// tailwind css v4, height (h-dvh): https://tailwindcss.com/docs/height
+// tailwind css v4, grid template columns and rows: https://tailwindcss.com/docs/grid-template-columns
 // tailwind css v4, display (hidden, sm:inline): https://tailwindcss.com/docs/display
-// tailwind css v4, responsive design (breakpoints and arbitrary variants): https://tailwindcss.com/docs/responsive-design
+// tailwind css v4, responsive design: https://tailwindcss.com/docs/responsive-design
 // tsdoc standard: https://tsdoc.org

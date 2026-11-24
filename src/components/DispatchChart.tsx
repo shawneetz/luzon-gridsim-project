@@ -25,6 +25,11 @@
 //   from xl up the chart fills its box again, which is also where the price row lines up
 //   why xl and not md: at 768px to 1279px the results panel is only about 370px to 850px
 //   wide, so a chart that shrinks to fit would draw its 15px axis text at 7px to 13px
+//
+// fit to screen (2xl and up):
+//   the svg keeps its shape (it is as tall as its width allows), but the box around it is allowed
+//   to be taller, so the box grows to fill the free height of the chart column and the svg is
+//   centered in it (the box is a flex column, the scroll box has my-auto), the legend stays at the bottom
 
 import { useState } from "react";
 import { CHART_H as H, CHART_PAD as PAD, CHART_W as W } from "@/lib/chartLayout";
@@ -84,7 +89,8 @@ const legendItem =
 
 // the sideways scroll box around the chart
 // focus-visible outline shows when the keyboard focuses it, so keyboard users can scroll it with the arrows
-const scrollBox = "overflow-x-auto focus-visible:outline-2 focus-visible:outline-white";
+// 2xl:my-auto centers it vertically when the box around it is taller than the svg
+const scrollBox = "overflow-x-auto focus-visible:outline-2 focus-visible:outline-white 2xl:my-auto";
 
 // the chart wrapper: relative for the tooltip, and a minimum width below xl so the
 // svg text stays readable (the scroll box above lets the rest scroll sideways)
@@ -126,6 +132,13 @@ const chartWrap = "relative min-w-[600px] xl:min-w-0";
  * - the price row under the chart does not scroll with it, below xl it is its own grid
  *   (see PriceRow.tsx), so the two only line up from xl up, and the chart now only shrinks
  *   from xl up too, so the two always change at the same width
+ *
+ * fit to screen (2xl and up):
+ * - the root box is a flex column that grows (`2xl:flex-1`) and may shrink (`2xl:min-h-0`), the
+ *   parent section gives it the height that is left under the heading and above the prices
+ * - the svg itself is not stretched, `h-auto w-full` keeps its shape, so the text never gets
+ *   squeezed, and the price row stays lined up with the bars, because it only depends on the width
+ * - the box padding stays `p-3`, PriceRow.tsx copies it (`0.75rem + 2px`), change both together
  *
  * @example
  * ```tsx
@@ -183,7 +196,7 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
   const tooltipMiddleY = active ? ((active.top + active.bottom) / 2 / H) * 100 : 0;
 
   return (
-    <div className="screen p-3">
+    <div className="screen p-3 2xl:flex 2xl:min-h-0 2xl:flex-1 2xl:flex-col">
       {/* scroll box: below xl the chart is wider than the panel and scrolls sideways */}
       <div className={scrollBox} tabIndex={0} role="region" aria-label="Dispatch chart, scrolls sideways on small screens">
         {/* relative wrapper: the tooltip is positioned against the svg, not the whole box */}
@@ -353,6 +366,7 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
 // mdn, svg text-anchor: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/text-anchor
 // mdn, css clamp(): https://developer.mozilla.org/en-US/docs/Web/CSS/clamp
 // mdn, overflow-x: https://developer.mozilla.org/en-US/docs/Web/CSS/overflow-x
+// mdn, auto margins in flexbox (centering): https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Aligning_items_in_a_flex_container#using_auto_margins_for_main_axis_alignment
 // mdn, tabindex (keyboard access to scrollable regions): https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/tabindex
 // mdn, region role: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/region_role
 // mdn, aria-pressed: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-pressed
@@ -363,6 +377,7 @@ export default function DispatchChart({ groups, blocks, values }: DispatchChartP
 // wai-aria authoring practices, tooltip pattern: https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/
 // tailwind css v4, stroke: https://tailwindcss.com/docs/stroke
 // tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
+// tailwind css v4, margin (my-auto): https://tailwindcss.com/docs/margin
 // tailwind css v4, overflow: https://tailwindcss.com/docs/overflow
 // tailwind css v4, responsive design (breakpoints and the max-md: variant): https://tailwindcss.com/docs/responsive-design
 // tailwind css v4, text decoration (line-through): https://tailwindcss.com/docs/text-decoration-line

@@ -9,6 +9,11 @@
 //   - open graph tags for link previews, the image itself comes from opengraph-image.tsx
 //   - the tab icon comes from icon.svg, both files are found by next.js by their names
 //   - the theme color tints the browser bar on phones (the grass green of the header)
+//
+// gui scale (fit to screen, 2xl and up):
+//   the whole ui is sized in rem, so the root font size scales everything together
+//   page.tsx sets data-gui="fit" on <html> while the simulator is open, so the landing
+//   page keeps its normal size
 
 import type { Metadata, Viewport } from "next";
 import { Press_Start_2P, VT323 } from "next/font/google";
@@ -30,6 +35,28 @@ const body = VT323({
 
 const TITLE = "Luzon GridSim";
 const DESCRIPTION = "Find the cheapest way to run the Luzon grid for a day, solved with the simplex method";
+
+/**
+ * root font size of the simulator on screens at least 1536px wide (2xl)
+ *
+ * @remarks
+ * the root size is the smallest of three limits, the class is written in full so tailwind finds it:
+ * - 20px           upper limit, so a very large screen does not get a huge ui
+ * - 100dvh / 58    height limit: the simulator is designed to be 58rem tall, a shorter window shrinks it
+ * - 100vw / 110    width limit: controls, chart and table need about 110rem side by side
+ * and the outer max() keeps it from going under 9px
+ *
+ * how to tune it:
+ * - a column shows a small scrollbar: raise 58 by 2 or 3 (the ui gets a little smaller)
+ * - there is empty space at the bottom: lower 58 (the ui gets bigger)
+ * - the columns are too tight sideways: raise 110
+ * - the same numbers are in the comments of page.tsx, change them together
+ *
+ * `dvh` is the visible height on phones with a moving address bar, `data-[gui=fit]` is the
+ * attribute that page.tsx sets, so the scale is off on the landing page
+ */
+const guiScale =
+  "2xl:data-[gui=fit]:[font-size:max(9px,min(20px,calc(100dvh/58),calc(100vw/110)))]";
 
 /**
  * browser tab title, description and open graph tags
@@ -70,7 +97,7 @@ export const viewport: Viewport = {
 // the shell around every page; children is whatever page is being shown
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${pixel.variable} ${body.variable} h-full antialiased`}>
+    <html lang="en" className={`${pixel.variable} ${body.variable} h-full antialiased ${guiScale}`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
@@ -85,4 +112,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 // next.js, environment variables (NEXT_PUBLIC_): https://nextjs.org/docs/app/guides/environment-variables
 // open graph protocol: https://ogp.me
 // mdn, meta theme-color: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/theme-color
+// mdn, viewport units (dvh, vw): https://developer.mozilla.org/en-US/docs/Web/CSS/length#relative_length_units_based_on_viewport
+// mdn, css min() and max(): https://developer.mozilla.org/en-US/docs/Web/CSS/min
+// mdn, rem unit (relative to the root font size): https://developer.mozilla.org/en-US/docs/Web/CSS/length#rem
+// tailwind css v4, arbitrary properties: https://tailwindcss.com/docs/adding-custom-styles#arbitrary-properties
+// tailwind css v4, data attribute variants: https://tailwindcss.com/docs/hover-focus-and-other-states#data-attributes
+// tailwind css v4, responsive design (2xl breakpoint): https://tailwindcss.com/docs/responsive-design
 // tsdoc standard: https://tsdoc.org

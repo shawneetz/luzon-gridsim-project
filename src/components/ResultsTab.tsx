@@ -1,24 +1,28 @@
 // thin layout file for the results of one solve
-// it decides what to show for each status and puts the pieces into panels,
+// it decides what to show for each status and puts the pieces into sections,
 // so the results read top to bottom as summary, then picture, then numbers
 //   1) summary   StatusBanner and StatGrid side by side in one row
 //   1b) help     only when infeasible: why it may happen, and a respawn button
 //   2) dispatch  DispatchChart at full width, with PriceRow directly under it
 //   3) numbers   DataTable (output of each plant group, with totals and demand)
-//                beside KeyInsights (below 2xl only, see the 2xl note)
-// the pieces own their own styling, this file only owns the order and the panels
+//                beside KeyInsights (see the 2xl note for the fit layout)
+// the pieces own their own styling, this file only owns the order and the sections
 //
 // layout (edit the tailwind classes below):
 //   summary row: stacked on small screens, one row from xl up (xl:flex-row)
-//   the banner column is 15rem wide (xl:w-60), the stat boxes take the rest
+//   the banner column is 15rem wide (xl:w-60, 14rem at 2xl), the stat boxes take the rest
 //   numbers row: one column on small screens, two cards from xl up, the table
 //   gets 3 parts and the insights get 2 (xl:grid-cols-[3fr_2fr])
 //   every section is a .panel with a .heading, see the shared looks in the global stylesheet
 //
-// 2xl note (right rail):
-//   from 2xl up the page shows the key insights in their own column on the far right
-//   (see page.tsx), so here the insights card is hidden and the table takes the full width
-//   below 2xl the card stays here, beside the table, like before
+// fit to screen (2xl and up):
+//   everything must be visible without scrolling, so the sections are flat (no panel frame, the
+//   results panel around them already has one) and arranged like a dashboard
+//     summary row         on top, its title is only read by screen readers
+//     chart and prices    left, 44rem wide, the chart box grows to fill the free height
+//     table and insights  right, stacked, the insights are 3 tiles and a 2 column energy list
+//   the wrapper around the chart section and the numbers is `display: contents` below 2xl, so the
+//   sections stay in one column there exactly like before, and a flex row at 2xl
 
 import type { ReactNode } from "react";
 import DataTable, { type FooterRow } from "./DataTable";
@@ -34,38 +38,50 @@ import type { SolveResponse } from "@/lib/types";
 
 /** props for the {@link Section} component */
 interface SectionProps {
-  /** heading shown at the top of the panel */
+  /** heading shown at the top of the section */
   title: string;
-  /** what goes inside the panel, spaced evenly in a column */
+  /** what goes inside the section, spaced evenly in a column */
   children: ReactNode;
-  /** extra tailwind classes for the panel, e.g. "2xl:hidden" (default: none) */
+  /** extra tailwind classes for the section, e.g. "2xl:w-[44rem]" (default: none) */
   className?: string;
+  /** hide the heading visually at 2xl, screen readers still read it (default: false) */
+  hideTitleOnFit?: boolean;
 }
 
 /**
- * one titled panel of the results, used by every section so they look the same
+ * one titled section of the results, used by every section so they look the same
  *
  * @param props - see {@link SectionProps}
  *
  * @remarks
  * a local helper on purpose: it is only used here, so it does not need its own file
  * `aria-label` names the region for screen readers, so they can jump between sections
- * `min-w-0` lets the panel shrink inside a grid column, so a wide table scrolls
+ * `min-w-0` lets the section shrink inside a grid column, so a wide table scrolls
  * inside its own box instead of pushing the page wider
- * `className` is added at the end, so a visibility class like `2xl:hidden` can switch the
- * whole panel off at one width, a hidden panel is skipped by screen readers too
+ * `className` is added at the end, so a size class like `2xl:w-[44rem]` is applied last
+ *
+ * fit to screen (2xl and up):
+ * - the section loses its panel look (`2xl:border-0 2xl:bg-transparent 2xl:p-0 2xl:shadow-none`),
+ *   a frame inside a frame costs about 4rem of height per section, and the results panel around
+ *   all of them already has the frame, the utility classes win over `.panel` from the components layer
+ * - the section and its inner box become flex columns that can shrink (`min-h-0`), so a child
+ *   with `flex-1` (the chart box) can grow into the free height
+ * - the heading margin is smaller, and `hideTitleOnFit` makes it screen reader only
  *
  * @example
  * ```tsx
- * <Section title="Summary">...</Section>
- * <Section title="Key insights" className="2xl:hidden">...</Section>
+ * <Section title="Summary" hideTitleOnFit>...</Section>
+ * <Section title="Dispatch vs demand (MW)" className="2xl:w-[44rem] 2xl:shrink-0">...</Section>
  * ```
  */
-function Section({ title, children, className = "" }: SectionProps) {
+function Section({ title, children, className = "", hideTitleOnFit = false }: SectionProps) {
   return (
-    <section aria-label={title} className={`panel min-w-0 p-4 ${className}`}>
-      <h2 className="heading">{title}</h2>
-      <div className="flex flex-col gap-3.5">{children}</div>
+    <section
+      aria-label={title}
+      className={`panel min-w-0 p-4 2xl:flex 2xl:min-h-0 2xl:flex-col 2xl:border-0 2xl:bg-transparent 2xl:p-0 2xl:shadow-none ${className}`}
+    >
+      <h2 className={`heading 2xl:mb-1 ${hideTitleOnFit ? "2xl:sr-only" : ""}`}>{title}</h2>
+      <div className="flex flex-col gap-3.5 2xl:min-h-0 2xl:flex-1 2xl:gap-1.5">{children}</div>
     </section>
   );
 }
@@ -98,14 +114,14 @@ interface ResultsTabProps {
  *
  * infeasible view (task 4.7):
  * - the "you died" banner and the iteration count stay in the summary, and a second
- *   panel lists why it may happen, with a respawn button (see InfeasibleHelp)
+ *   section lists why it may happen, with a respawn button (see InfeasibleHelp)
  * - the respawn action itself lives in the page, because it resets the page state
  *
  * edge cases:
  * - `status` of "invalid" or "error": only the message is shown
- * - `status` of "infeasible": the summary panel and the help panel are shown,
+ * - `status` of "infeasible": the summary and the help section are shown,
  *   the api sends no cost, chart, table or prices
- * - `status` of "optimal": every panel is shown
+ * - `status` of "optimal": every section is shown
  * - the demand row is cut to the number of blocks the api sent, so a short response
  *   never prints extra columns
  * - `min-w-0` lets the stat boxes shrink inside the row instead of pushing the page wider
@@ -114,13 +130,17 @@ interface ResultsTabProps {
  * - at xl the stat boxes are tight (about 620px for 5 columns), if the cost wraps,
  *   make the banner narrower (`xl:w-52`) or move the row breakpoint to `2xl:`
  *
- * right rail (2xl):
- * - the key insights card is rendered here and in the page rail, and each one is hidden
- *   at the width where the other shows (`2xl:hidden` here, `hidden 2xl:block` in the page),
- *   so only one is ever visible and a hidden one is `display: none`
- * - the numbers row goes back to one column at 2xl (`2xl:grid-cols-1`), because the
- *   table is then the only card in it, a leftover 3fr and 2fr split would waste space
- * - if the rail is ever removed from the page, remove both 2xl classes here as well
+ * fit to screen (2xl and up):
+ * - the root is `h-full` and a column, the summary keeps its own height, and the zone under it
+ *   (`flex-1 min-h-0`) takes the rest, where the chart section and the numbers sit side by side
+ * - the zone wrapper is `contents` below 2xl: it has no box, so its two children are laid out by the
+ *   column above exactly as if the wrapper was not there, at 2xl `flex` turns it into a row
+ * - the chart section is 44rem wide because the price slots need about 6.3rem each (6 columns
+ *   under the bars), a narrower chart would cut the prices, see PriceRow.tsx
+ * - the numbers grid becomes one column at 2xl (`2xl:grid-cols-1`), table first, insights under it,
+ *   `content-start` keeps them at the top and `min-w-0` lets the table shrink and scroll inside itself
+ * - height budget in rem at the design size: summary 4.7, chart section 33.7 (the chart box grows to
+ *   fill the free height), numbers about 38.8, the zone has 42.3, see layout.tsx for the full budget
  *
  * @example
  * ```tsx
@@ -145,13 +165,13 @@ export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
     : [];
 
   return (
-    // flex column with an even gap between the sections
-    <div className="flex flex-col gap-3.5">
+    // flex column with an even gap between the sections, as tall as the tab panel at 2xl
+    <div className="flex flex-col gap-3.5 2xl:h-full 2xl:min-h-0 2xl:gap-2">
       {/* section 1: banner and stat boxes in one row from xl up */}
-      <Section title="Summary">
-        <div className="flex flex-col gap-3.5 xl:flex-row xl:items-stretch">
+      <Section title="Summary" hideTitleOnFit>
+        <div className="flex flex-col gap-3.5 xl:flex-row xl:items-stretch 2xl:gap-2">
           {/* status is "optimal" or "infeasible" here, typescript narrowed it above */}
-          <div className="flex flex-col *:flex-1 xl:w-60 xl:shrink-0">
+          <div className="flex flex-col *:flex-1 xl:w-60 xl:shrink-0 2xl:w-56">
             <StatusBanner status={status} />
           </div>
           <div className="min-w-0 xl:flex-1">
@@ -170,17 +190,19 @@ export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
 
       {/* sections 2 and 3 only exist when the problem is optimal */}
       {dispatch && prices && (
-        <>
-          {/* section 2: chart at full width, prices directly under it */}
-          <Section title="Dispatch vs demand (MW)">
+        // zone wrapper: no box below 2xl (children join the column above), a row at 2xl
+        <div className="contents 2xl:flex 2xl:min-h-0 2xl:flex-1 2xl:gap-2">
+          {/* section 2: chart at full width, prices directly under it
+              at 2xl it is the left column, 44rem wide, and it does not shrink */}
+          <Section title="Dispatch vs demand (MW)" className="2xl:w-[44rem] 2xl:shrink-0">
             <DispatchChart groups={dispatch.groups} blocks={dispatch.blocks} values={dispatch.values} />
-            <h3 className="subheading">Price of electricity (₱ per MWh)</h3>
+            <h3 className="subheading 2xl:mt-0">Price of electricity (₱ per MWh)</h3>
             <PriceRow blocks={prices.blocks} values={prices.values} />
           </Section>
 
           {/* section 3: two cards side by side from xl up, the table and the key insights
-              from 2xl up the insights move to the page rail, so the table gets the full width */}
-          <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:grid-cols-1">
+              at 2xl they are stacked in the right column, table first */}
+          <div className="grid grid-cols-1 items-start gap-3.5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] 2xl:min-w-0 2xl:flex-1 2xl:grid-cols-1 2xl:content-start 2xl:gap-2">
             <Section title="Output of each plant group (MW)">
               <DataTable
                 corner="Plant group"
@@ -197,12 +219,11 @@ export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
                 Gold cell = plant group at full capacity
               </p>
             </Section>
-            {/* hidden at 2xl, the page shows the same card in the right rail there */}
-            <Section title="Key insights" className="2xl:hidden">
+            <Section title="Key insights">
               <KeyInsights dispatch={dispatch} prices={prices} />
             </Section>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -211,16 +232,19 @@ export default function ResultsTab({ result, onRespawn }: ResultsTabProps) {
 // references:
 // react, thinking in react (splitting the ui into components): https://react.dev/learn/thinking-in-react
 // react, conditional rendering: https://react.dev/learn/conditional-rendering
-// react, fragments: https://react.dev/reference/react/Fragment
 // react, children prop and ReactNode: https://react.dev/learn/passing-props-to-a-component#passing-jsx-as-children
 // typescript, narrowing: https://www.typescriptlang.org/docs/handbook/2/narrowing.html
 // typescript, importing types inline (import { type X }): https://www.typescriptlang.org/docs/handbook/modules/reference.html#type-modifiers-on-import-names
 // mdn, array.prototype.slice: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice
 // mdn, aria-label: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-label
+// mdn, display: contents: https://developer.mozilla.org/en-US/docs/Web/CSS/display#contents
+// mdn, flexbox (min-height auto and shrinking): https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout/Controlling_ratios_of_flex_items_along_the_main_axis
+// tailwind css v4, display (contents, hidden): https://tailwindcss.com/docs/display
 // tailwind css v4, grid template columns: https://tailwindcss.com/docs/grid-template-columns
+// tailwind css v4, align content: https://tailwindcss.com/docs/align-content
 // tailwind css v4, align items: https://tailwindcss.com/docs/align-items
 // tailwind css v4, min-width: https://tailwindcss.com/docs/min-width
-// tailwind css v4, display (hidden): https://tailwindcss.com/docs/display
+// tailwind css v4, screen readers (sr-only): https://tailwindcss.com/docs/display#screen-reader-only
 // tailwind css v4, responsive design (2xl breakpoint): https://tailwindcss.com/docs/responsive-design
 // tailwind css v4, styling direct children (*: variant): https://tailwindcss.com/docs/hover-focus-and-other-states#styling-direct-children
 // cmsc 150 final project spec, failure cases (infeasible problems), table 1 (plant capacities) and table 2 (demand)
